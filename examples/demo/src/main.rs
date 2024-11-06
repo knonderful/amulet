@@ -7,8 +7,9 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 use std::rc::Rc;
 use vui_core::component::mouse_aware::{MouseAware, MouseAwareState};
-use vui_core::component::{ComponentEvent, HandleEvent, MouseButton, Pos, Render, Size, Text};
+use vui_core::component::{ComponentEvent, HandleEvent, Pos, Render, Size, Text};
 use vui_core::font_manager::{FontDetails, FontManager};
+use vui_core::mouse::MouseButton;
 use vui_core::render::{RenderConstraints, RenderDestination};
 use vui_core::VuiResult;
 
@@ -174,7 +175,11 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if gui_state.button_state.click_completed(MouseButton::Left) {
+        if gui_state
+            .button_state
+            .click_states()
+            .is_click_completed(MouseButton::Left)
+        {
             app_state.click_count += 1;
         }
 

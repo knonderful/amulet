@@ -4,6 +4,7 @@ pub mod component;
 pub mod font_manager;
 pub mod generator;
 pub mod math;
+pub mod mouse;
 pub mod render;
 pub mod resource_manager;
 pub mod util;

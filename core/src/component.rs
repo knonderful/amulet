@@ -1,4 +1,5 @@
 use crate::math::Size as MathSize;
+use crate::mouse::MouseButton;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::Color;
@@ -10,28 +11,6 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 pub mod mouse_aware;
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, strum::EnumCount, strum::EnumIter)]
-pub enum MouseButton {
-    Left,
-    Middle,
-    Right,
-}
-
-impl TryFrom<sdl2::mouse::MouseButton> for MouseButton {
-    type Error = ();
-
-    fn try_from(value: sdl2::mouse::MouseButton) -> Result<Self, Self::Error> {
-        use sdl2::mouse::MouseButton as MB;
-        let out = match value {
-            MB::Unknown | MB::X1 | MB::X2 => return Err(()),
-            MB::Left => MouseButton::Left,
-            MB::Middle => MouseButton::Middle,
-            MB::Right => MouseButton::Right,
-        };
-        Ok(out)
-    }
-}
 
 pub trait Inner {
     type Component;
