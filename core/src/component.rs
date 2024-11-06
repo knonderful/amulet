@@ -1,6 +1,6 @@
 use crate::geom::{ComponentSize, Point};
 use crate::mouse::Button;
-use crate::render::{RenderConstraints, RenderDestination};
+use crate::render::RenderConstraints;
 use crate::VuiResult;
 use std::ops::Deref;
 
@@ -66,24 +66,24 @@ pub trait Render<X> {
     fn render(
         &self,
         state: Self::State<'_>,
-        target: (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_ctx: X,
     ) -> VuiResult<()>;
 }
 
-impl<T, X> Render<X> for T
+impl<T, R> Render<R> for T
 where
     T: Deref,
-    <T as Deref>::Target: Render<X>,
+    <T as Deref>::Target: Render<R>,
 {
-    type State<'a> = <T::Target as Render<X>>::State<'a>;
+    type State<'a> = <T::Target as Render<R>>::State<'a>;
 
     fn render(
         &self,
         state: Self::State<'_>,
-        target: (&mut RenderDestination, RenderConstraints),
-        render_ctx: X,
+        constraints: RenderConstraints,
+        render_ctx: R,
     ) -> VuiResult<()> {
-        self.deref().render(state, target, render_ctx)
+        self.deref().render(state, constraints, render_ctx)
     }
 }

@@ -1,6 +1,6 @@
 use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Size};
 use crate::geom::{ComponentSize, Point};
-use crate::render::{RenderConstraints, RenderDestination};
+use crate::render::RenderConstraints;
 use crate::VuiResult;
 
 pub struct Position<C> {
@@ -76,12 +76,12 @@ where
     fn render(
         &self,
         state: Self::State<'_>,
-        (dest, constraints): (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_ctx: X,
     ) -> VuiResult<()> {
         let Some(constraints) = constraints.clip_topleft(self.value.to_vector()) else {
             return Ok(());
         };
-        self.inner.render(state, (dest, constraints), render_ctx)
+        self.inner.render(state, constraints, render_ctx)
     }
 }

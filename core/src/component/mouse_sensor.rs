@@ -2,7 +2,7 @@ use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Siz
 use crate::geom::{ComponentSize, Point, Rect};
 use crate::math::LossyInto;
 use crate::mouse::{ClickStates, HoverState};
-use crate::render::{RenderConstraints, RenderDestination};
+use crate::render::RenderConstraints;
 use crate::VuiResult;
 
 #[derive(Debug, Default, Clone)]
@@ -103,10 +103,10 @@ where
     fn render(
         &self,
         state: Self::State<'_>,
-        target: (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_ctx: X,
     ) -> VuiResult<()> {
-        self.inner.render(state.1, target, render_ctx)
+        self.inner.render(state.1, constraints, render_ctx)
     }
 }
 

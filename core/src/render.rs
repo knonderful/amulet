@@ -1,9 +1,5 @@
 use crate::geom::{ComponentSize, Rect, Vector};
 
-// TODO: Remove this
-#[derive(Default)]
-pub struct RenderDestination {}
-
 #[derive(Debug, Clone)]
 pub struct RenderConstraints {
     pub clip_rect: Rect,

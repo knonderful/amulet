@@ -3,7 +3,7 @@ use amulet_core::component::{
 };
 use amulet_core::geom::{ComponentSize, Rect};
 use amulet_core::mouse::Button;
-use amulet_core::render::{RenderConstraints, RenderDestination};
+use amulet_core::render::RenderConstraints;
 use amulet_core::VuiResult;
 use amulet_sdl2::temp_components::Text;
 use amulet_sdl2::{event_iterator, Event, RenderContext};
@@ -46,10 +46,10 @@ impl Render<&mut RenderContext<'_>> for Label<'_> {
     fn render(
         &self,
         state: Self::State<'_>,
-        target: (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_context: &mut RenderContext,
     ) -> VuiResult<()> {
-        self.component.render(state, target, render_context)
+        self.component.render(state, constraints, render_context)
     }
 }
 
@@ -103,16 +103,16 @@ impl Render<&mut RenderContext<'_>> for Gui<'_> {
     fn render(
         &self,
         gui_state: Self::State<'_>,
-        (dest, constriants): (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_ctx: &mut RenderContext,
     ) -> VuiResult<()> {
         self.button.render(
             (&gui_state.button_state, ()),
-            (dest, constriants.clone()),
+            constraints.clone(),
             render_ctx,
         )?;
         self.clicked_label
-            .render((), (dest, constriants.clone()), render_ctx)?;
+            .render((), constraints, render_ctx)?;
         Ok(())
     }
 }
@@ -172,11 +172,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&texture_creator, &mut canvas);
-        let mut render_dest = RenderDestination::default();
         let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (800, 600).into()));
         gui.render(
             &gui_state,
-            (&mut render_dest, constraints.clone()),
+            constraints,
             &mut render_ctx,
         )?;
 

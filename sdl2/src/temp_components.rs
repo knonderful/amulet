@@ -1,7 +1,7 @@
 use crate::{map_error, RenderContext};
 use amulet_core::component::{ComponentEvent, HandleEvent, Render, Size};
 use amulet_core::geom::ComponentSize;
-use amulet_core::render::{RenderConstraints, RenderDestination};
+use amulet_core::render::RenderConstraints;
 use amulet_core::VuiResult;
 use sdl2::pixels::Color;
 use sdl2::surface::Surface;
@@ -77,7 +77,7 @@ where
     fn render(
         &self,
         _state: Self::State<'_>,
-        (_, constraints): (&mut RenderDestination, RenderConstraints),
+        constraints: RenderConstraints,
         render_ctx: &mut RenderContext,
     ) -> VuiResult<()> {
         let surface = self.renderer.render(&self.text)?;
