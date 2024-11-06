@@ -34,6 +34,16 @@ impl TryFrom<sdl2::mouse::MouseButton> for MouseButton {
     }
 }
 
+pub trait Inner {
+    type Component;
+    fn inner(&self) -> &Self::Component;
+}
+
+pub trait InnerMut {
+    type Component;
+    fn inner_mut(&mut self) -> &mut Self::Component;
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ComponentEvent {
     MouseMotion(Point),
@@ -105,6 +115,22 @@ pub struct Pos<C> {
 impl<C> Pos<C> {
     pub fn new(pos: Point, inner: C) -> Self {
         Self { pos, inner }
+    }
+}
+
+impl<C> Inner for Pos<C> {
+    type Component = C;
+
+    fn inner(&self) -> &Self::Component {
+        &self.inner
+    }
+}
+
+impl<C> InnerMut for Pos<C> {
+    type Component = C;
+
+    fn inner_mut(&mut self) -> &mut Self::Component {
+        &mut self.inner
     }
 }
 
