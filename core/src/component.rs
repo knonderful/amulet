@@ -106,7 +106,7 @@ pub trait HandleEvent {
 
     fn handle_event(
         &self,
-        _state: Self::State<'_>,
+        #[allow(unused)] state: Self::State<'_>,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
         Ok(event)
@@ -118,9 +118,9 @@ pub trait Render<R> {
 
     fn render(
         &self,
-        _state: Self::State<'_>,
+        #[allow(unused)] state: Self::State<'_>,
         constraints: RenderConstraints,
-        _render_ctx: &mut R,
+        #[allow(unused)] render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
         Ok(constraints)
     }
@@ -177,3 +177,11 @@ macro_rules! impl_tuple_render {
 
 impl_tuple_handle_event! {(A, B, C, E, F, G, H, I, J, K)}
 impl_tuple_render! {(A, B, C, E, F, G, H, I, J, K)}
+
+pub trait SizeAttr {
+    fn size(&self) -> Size;
+}
+
+pub trait PositionAttr {
+    fn position(&self) -> Point;
+}

@@ -11,7 +11,7 @@ pub use factory::WidgetFactory;
 use sdl2::render::Texture;
 use std::rc::Rc;
 
-struct Image<'a> {
+pub struct Image<'a> {
     texture: Rc<Texture<'a>>,
 }
 

@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
+use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints, SizeAttr};
 use crate::geom::Size;
 use crate::VuiResult;
 
@@ -11,8 +11,10 @@ impl Frame {
     pub fn new(size: Size) -> Self {
         Self { size }
     }
+}
 
-    pub fn size(&self) -> Size {
+impl SizeAttr for Frame {
+    fn size(&self) -> Size {
         self.size
     }
 }

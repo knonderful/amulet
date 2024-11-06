@@ -1,27 +1,21 @@
-use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
-use amulet_core::geom::{Point, Rect, Size, Vector};
-use amulet_core::VuiResult;
+use crate::ui::main_form::{MainForm, MainFormState};
+use amulet_core::component::{HandleEvent, Render, RenderConstraints};
+use amulet_core::geom::Rect;
 use amulet_ez::theme::Theme;
-use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
+use amulet_ez::widget::WidgetFactory;
 use amulet_sdl2::lossy::LossyInto;
-use amulet_sdl2::render::{RenderContext, SdlRender};
+use amulet_sdl2::render::RenderContext;
 use amulet_sdl2::{event_iterator, Event};
 use sdl2::event::{Event as SdlEvent, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use std::ops::{Deref, DerefMut};
 
+mod ui;
+
 #[derive(Debug, Default)]
 struct AppState {
     click_count: u64,
-}
-
-#[derive(Debug, Default)]
-struct MainFormState {
-    button: ButtonState,
-    btn_ok: ButtonState,
-    btn_cancel: ButtonState,
-    btn_defaults: ButtonState,
 }
 
 #[derive(Debug, Default)]
@@ -51,126 +45,6 @@ impl<T> DerefMut for ChangeDetector<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.1 = true;
         &mut self.0
-    }
-}
-
-struct MainForm<'a> {
-    widget_factory: &'a mut WidgetFactory<'a>,
-    button: (Position, Button<'a>),
-    btn_ok: (Position, Button<'a>),
-    btn_cancel: (Position, Button<'a>),
-    btn_defaults: (Position, Button<'a>),
-}
-
-impl<'a> MainForm<'a> {
-    fn create_button(
-        widget_factory: &mut WidgetFactory<'a>,
-        click_count: u64,
-    ) -> VuiResult<(Position, Button<'a>)> {
-        Ok((
-            Position::new((80, 100).into()),
-            widget_factory.button(&format!("EZ Button ({} clicks)", click_count))?,
-        ))
-    }
-
-    fn calc_anchor(rect: Rect, size: Size) -> Position {
-        Position::new(rect.limit() - size.as_vector())
-    }
-
-    fn anchor_bottom_right(rect: Rect, component: &mut (Position, Button)) -> Point {
-        let pos = Self::calc_anchor(rect, component.1.size());
-        let out = pos.position();
-        component.0 = pos;
-        out
-    }
-
-    fn new(
-        widget_factory: &'a mut WidgetFactory<'a>,
-        rect: Rect,
-        click_count: u64,
-    ) -> VuiResult<Self> {
-        let button = Self::create_button(widget_factory, click_count)?;
-        let mut buttons = widget_factory
-            .button_set(&["OK", "Cancel", "Defaults"])?
-            .into_iter();
-
-        // Actual positions will be calculated in `resize()`
-        let btn_ok = (Position::new(Point::zero()), buttons.next().unwrap());
-        let btn_cancel = (Position::new(Point::zero()), buttons.next().unwrap());
-        let btn_defaults = (Position::new(Point::zero()), buttons.next().unwrap());
-
-        let mut form = Self {
-            widget_factory,
-            button,
-            btn_ok,
-            btn_cancel,
-            btn_defaults,
-        };
-
-        form.resize(rect)?;
-
-        Ok(form)
-    }
-
-    fn resize(&mut self, rect: Rect) -> VuiResult<()> {
-        let pos = Self::anchor_bottom_right(rect, &mut self.btn_ok);
-        let rect = rect.translate(Vector::new(pos.x - rect.size.width - 10, 0));
-        let pos = Self::anchor_bottom_right(rect, &mut self.btn_defaults);
-        let rect = rect.translate(Vector::new(pos.x - rect.size.width - 10, 0));
-        Self::anchor_bottom_right(rect, &mut self.btn_cancel);
-
-        Ok(())
-    }
-
-    fn update_click_count(&mut self, click_count: u64) -> VuiResult<()> {
-        self.button = Self::create_button(self.widget_factory, click_count)?;
-        Ok(())
-    }
-}
-
-impl HandleEvent for MainForm<'_> {
-    type State<'a> = &'a mut MainFormState;
-
-    fn handle_event(
-        &self,
-        gui_state: &mut MainFormState,
-        event: ComponentEvent,
-    ) -> VuiResult<ComponentEvent> {
-        for (c, mut s) in [
-            (&self.button, &mut gui_state.button),
-            (&self.btn_ok, &mut gui_state.btn_ok),
-            (&self.btn_cancel, &mut gui_state.btn_cancel),
-            (&self.btn_defaults, &mut gui_state.btn_defaults),
-        ] {
-            c.handle_event(((), &mut s), event.clone())?;
-        }
-        // Kind of nonsensical =)
-        Ok(event)
-    }
-}
-
-impl<R> Render<R> for MainForm<'_>
-where
-    R: SdlRender,
-{
-    type State<'a> = &'a MainFormState;
-
-    fn render(
-        &self,
-        gui_state: Self::State<'_>,
-        constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
-        for (c, s) in [
-            (&self.button, &gui_state.button),
-            (&self.btn_ok, &gui_state.btn_ok),
-            (&self.btn_cancel, &gui_state.btn_cancel),
-            (&self.btn_defaults, &gui_state.btn_defaults),
-        ] {
-            c.render(((), &s), constraints.clone(), render_ctx)?;
-        }
-        // Kind of nonsensical =)
-        Ok(constraints)
     }
 }
 
