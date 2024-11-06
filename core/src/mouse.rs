@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, strum::EnumCount, strum::EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum MouseButton {
     Left,
     Middle,

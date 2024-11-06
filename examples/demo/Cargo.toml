@@ -1,8 +1,8 @@
 [package]
-name = "vui-demo"
+name = "amulet-demo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-vui-core = { path = "../../core" }
+amulet-core = { path = "../../core" }
 sdl2 = { version = "0.36", features = ["ttf", "gfx"] }

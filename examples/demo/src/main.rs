@@ -6,11 +6,11 @@ use sdl2::ttf::Font;
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
-use vui_core::component::mouse_aware::{MouseAware, MouseAwareState};
-use vui_core::component::{ComponentEvent, HandleEvent, Pos, Render, Size, Text};
-use vui_core::mouse::MouseButton;
-use vui_core::render::{RenderConstraints, RenderDestination};
-use vui_core::VuiResult;
+use amulet_core::component::mouse_aware::{MouseAware, MouseAwareState};
+use amulet_core::component::{ComponentEvent, HandleEvent, Pos, Render, Size, Text};
+use amulet_core::mouse::MouseButton;
+use amulet_core::render::{RenderConstraints, RenderDestination};
+use amulet_core::VuiResult;
 
 struct Label<'ttf> {
     component: Text<(Rc<Font<'ttf, 'static>>, Color)>,
@@ -32,7 +32,7 @@ impl<'ttf> HandleEvent for Label<'ttf> {
 }
 
 impl Size for Label<'_> {
-    fn size(&self) -> vui_core::math::Size {
+    fn size(&self) -> amulet_core::math::Size {
         self.component.size()
     }
 }
