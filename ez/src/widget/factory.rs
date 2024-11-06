@@ -6,6 +6,21 @@ use amulet_core::VuiResult;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
 
+#[allow(unused)]
+mod dev {
+    //! Temporary module for dev tools.
+
+    use sdl2::surface::Surface;
+
+    pub fn outline(surf: Surface<'_>) -> Surface<'_> {
+        let rect = surf.rect();
+        let mut canv = surf.into_canvas().unwrap();
+        canv.set_draw_color(sdl2::pixels::Color::RED);
+        canv.draw_rect(rect).unwrap();
+        canv.into_surface()
+    }
+}
+
 pub struct WidgetFactory<'a> {
     theme: &'a Theme<'a>,
     texture_creator: &'a TextureCreator<WindowContext>,

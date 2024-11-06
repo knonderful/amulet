@@ -1,5 +1,5 @@
 use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
-use amulet_core::geom::{Rect, Size};
+use amulet_core::geom::{Point, Rect, Size, Vector};
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
 use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
@@ -67,29 +67,62 @@ impl<'a> MainForm<'a> {
         click_count: u64,
     ) -> VuiResult<(Position, Button<'a>)> {
         Ok((
-            Position::new((30, 20).into()),
+            Position::new((80, 100).into()),
             widget_factory.button(&format!("EZ Button ({} clicks)", click_count))?,
         ))
     }
 
-    fn new(widget_factory: &'a mut WidgetFactory<'a>, _click_count: u64) -> VuiResult<Self> {
-        let button = Self::create_button(widget_factory, _click_count)?;
+    fn calc_anchor(rect: Rect, size: Size) -> Position {
+        let (dx, dy) = size.to_i32().into();
+        Position::new((rect.max - Point::new(dx, dy)).to_point())
+    }
+
+    fn anchor_bottom_right(rect: Rect, component: &mut (Position, Button)) -> Point {
+        let pos = Self::calc_anchor(rect, component.1.size());
+        let out = pos.position();
+        component.0 = pos;
+        out
+    }
+
+    fn new(
+        widget_factory: &'a mut WidgetFactory<'a>,
+        rect: Rect,
+        click_count: u64,
+    ) -> VuiResult<Self> {
+        let button = Self::create_button(widget_factory, click_count)?;
         let mut buttons = widget_factory
             .button_set(&["OK", "Cancel", "Defaults"])?
             .into_iter();
-        let btn_ok = (Position::new((10, 100).into()), buttons.next().unwrap());
-        let btn_cancel = (Position::new((10, 130).into()), buttons.next().unwrap());
-        let btn_defaults = (Position::new((10, 160).into()), buttons.next().unwrap());
-        Ok(Self {
+
+        // Actual positions will be calculated in `resize()`
+        let btn_ok = (Position::new(Point::zero()), buttons.next().unwrap());
+        let btn_cancel = (Position::new(Point::zero()), buttons.next().unwrap());
+        let btn_defaults = (Position::new(Point::zero()), buttons.next().unwrap());
+
+        let mut form = Self {
             widget_factory,
             button,
             btn_ok,
             btn_cancel,
             btn_defaults,
-        })
+        };
+
+        form.resize(rect)?;
+
+        Ok(form)
     }
 
-    fn update(&mut self, click_count: u64) -> VuiResult<()> {
+    fn resize(&mut self, rect: Rect) -> VuiResult<()> {
+        let pos = Self::anchor_bottom_right(rect, &mut self.btn_ok);
+        let rect = rect.translate(Vector::new(pos.x - rect.size().width - 10, 0));
+        let pos = Self::anchor_bottom_right(rect, &mut self.btn_defaults);
+        let rect = rect.translate(Vector::new(pos.x - rect.size().width - 10, 0));
+        Self::anchor_bottom_right(rect, &mut self.btn_cancel);
+
+        Ok(())
+    }
+
+    fn update_click_count(&mut self, click_count: u64) -> VuiResult<()> {
         self.button = Self::create_button(self.widget_factory, click_count)?;
         Ok(())
     }
@@ -151,10 +184,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .resizable()
         .build()?;
 
-    let mut window_rect = {
+    let mut window_rect = ChangeDetector::new({
         let (w, h) = window.size();
         Rect::from_size(Size::new(w, h).cast())
-    };
+    });
 
     let mut canvas = window.into_canvas().present_vsync().build()?;
 
@@ -168,7 +201,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app_state = ChangeDetector::new(AppState::default());
     let mut main_form_state = MainFormState::default();
 
-    let mut main_form = MainForm::new(&mut widget_factory, app_state.click_count)?;
+    let mut main_form = MainForm::new(&mut widget_factory, *window_rect, app_state.click_count)?;
 
     'running: loop {
         for event in event_iterator(&mut event_pump) {
@@ -176,7 +209,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Event::Amulet(evt) => {
                     main_form.handle_event(
                         &mut main_form_state,
-                        evt.into_component_event(window_rect),
+                        evt.into_component_event(*window_rect),
                     )?;
                 }
                 Event::Sdl(evt) => match evt {
@@ -198,18 +231,24 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         if main_form_state.button.was_clicked() {
             app_state.click_count += 1;
         }
+        if main_form_state.btn_cancel.was_clicked() {
+            break 'running;
+        }
 
         canvas.set_draw_color(Color::RGB(0x3c, 0x3f, 0x41));
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&mut canvas);
-        let constraints = RenderConstraints::new(window_rect);
+        let constraints = RenderConstraints::new(*window_rect);
         main_form.render(&main_form_state, constraints, &mut render_ctx)?;
 
         canvas.present();
 
         if app_state.changed() {
-            main_form.update(app_state.click_count)?;
+            main_form.update_click_count(app_state.click_count)?;
+        }
+        if window_rect.changed() {
+            main_form.resize(*window_rect)?;
         }
     }
 
