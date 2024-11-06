@@ -1,5 +1,5 @@
 use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
-use amulet_core::geom::Rect;
+use amulet_core::geom::{Rect, Size};
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
 use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
@@ -15,16 +15,16 @@ struct AppState {
 }
 
 #[derive(Debug, Default)]
-struct GuiState {
+struct MainFormState {
     button_state: ButtonState,
 }
 
-struct Gui<'a> {
+struct MainForm<'a> {
     widget_factory: &'a mut WidgetFactory<'a>,
     button: (Position, Button<'a>),
 }
 
-impl<'a> Gui<'a> {
+impl<'a> MainForm<'a> {
     fn create_button(
         widget_factory: &mut WidgetFactory<'a>,
         click_count: u64,
@@ -49,8 +49,8 @@ impl<'a> Gui<'a> {
     }
 }
 
-impl HandleEvent for Gui<'_> {
-    type State<'a> = &'a mut GuiState;
+impl HandleEvent for MainForm<'_> {
+    type State<'a> = &'a mut MainFormState;
 
     fn handle_event(
         &self,
@@ -62,11 +62,11 @@ impl HandleEvent for Gui<'_> {
     }
 }
 
-impl<R> Render<R> for Gui<'_>
+impl<R> Render<R> for MainForm<'_>
 where
     R: SdlRender,
 {
-    type State<'a> = &'a GuiState;
+    type State<'a> = &'a MainFormState;
 
     fn render(
         &self,
@@ -92,6 +92,11 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .resizable()
         .build()?;
 
+    let window_rect = {
+        let (w, h) = window.size();
+        Rect::from_size(Size::new(w, h).cast())
+    };
+
     let mut canvas = window.into_canvas().present_vsync().build()?;
 
     let ttf_context = sdl2::ttf::init()?;
@@ -102,16 +107,18 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut event_pump = sdl_context.event_pump()?;
 
     let mut app_state = AppState::default();
-    let mut gui_state = GuiState::default();
-    let comp_rect = Rect::from_size((800, 600).into());
+    let mut main_form_state = MainFormState::default();
 
-    let mut gui = Gui::new(&mut widget_factory, app_state.click_count)?;
+    let mut main_form = MainForm::new(&mut widget_factory, app_state.click_count)?;
 
     'running: loop {
         for event in event_iterator(&mut event_pump) {
             match event {
                 Event::Amulet(evt) => {
-                    gui.handle_event(&mut gui_state, evt.into_component_event(comp_rect))?;
+                    main_form.handle_event(
+                        &mut main_form_state,
+                        evt.into_component_event(window_rect),
+                    )?;
                 }
                 Event::Sdl(evt) => match evt {
                     SdlEvent::Quit { .. }
@@ -124,7 +131,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if gui_state.button_state.was_clicked() {
+        if main_form_state.button_state.was_clicked() {
             app_state.click_count += 1;
         }
 
@@ -132,12 +139,12 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&mut canvas);
-        let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (800, 600).into()));
-        gui.render(&gui_state, constraints, &mut render_ctx)?;
+        let constraints = RenderConstraints::new(window_rect);
+        main_form.render(&main_form_state, constraints, &mut render_ctx)?;
 
         canvas.present();
 
-        gui.update(app_state.click_count)?;
+        main_form.update(app_state.click_count)?;
     }
 
     Ok(())
