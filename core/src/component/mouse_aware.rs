@@ -1,9 +1,10 @@
 use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Size};
+use crate::geom::{ComponentSize, Point, Rect};
+use crate::math::LossyInto;
 use crate::mouse::MouseClickStates;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::{Color, PixelFormatEnum};
-use sdl2::rect::{Point, Rect};
 use sdl2::surface::Surface;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -50,8 +51,11 @@ where
 {
     fn is_inside(&self, pos: Point) -> bool {
         let size = self.size();
-        let rect = Rect::new(0, 0, size.w, size.h);
-        rect.contains_point(pos)
+        let rect = Rect::new(
+            Point::origin(),
+            Point::new(size.width.lossy_into(), size.height.lossy_into()),
+        );
+        rect.contains(pos)
     }
 }
 
@@ -59,7 +63,7 @@ impl<C> Size for MouseAware<C>
 where
     C: Size,
 {
-    fn size(&self) -> crate::math::Size {
+    fn size(&self) -> ComponentSize {
         self.inner.size()
     }
 }
@@ -119,7 +123,11 @@ where
         let (state, inner_state) = state;
         if state.hover_state == HoverState::Inside {
             let size = self.size();
-            let surf = Surface::new(size.w, size.h, PixelFormatEnum::ARGB8888)?;
+            let surf = Surface::new(
+                size.width.into(),
+                size.height.into(),
+                PixelFormatEnum::ARGB8888,
+            )?;
             let mut canvas = surf.into_canvas()?;
             canvas.set_draw_color(Color::RGB(0, 100, 0));
             canvas.clear();

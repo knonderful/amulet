@@ -1,16 +1,16 @@
+use amulet_core::component::mouse_aware::{MouseAware, MouseAwareState};
+use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, Size, Text};
+use amulet_core::geom::{ComponentSize, Rect};
+use amulet_core::mouse::MouseButton;
+use amulet_core::render::{RenderConstraints, RenderDestination};
+use amulet_core::VuiResult;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
 use sdl2::ttf::Font;
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
-use amulet_core::component::mouse_aware::{MouseAware, MouseAwareState};
-use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, Size, Text};
-use amulet_core::mouse::MouseButton;
-use amulet_core::render::{RenderConstraints, RenderDestination};
-use amulet_core::VuiResult;
 
 struct Label<'ttf> {
     component: Text<(Rc<Font<'ttf, 'static>>, Color)>,
@@ -32,7 +32,7 @@ impl<'ttf> HandleEvent for Label<'ttf> {
 }
 
 impl Size for Label<'_> {
-    fn size(&self) -> amulet_core::math::Size {
+    fn size(&self) -> ComponentSize {
         self.component.size()
     }
 }
@@ -121,7 +121,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut canvas = window.into_canvas().present_vsync().build()?;
 
     let ttf_context = sdl2::ttf::init()?;
-    let font = Rc::new(ttf_context.load_font(Path::new("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"), 14)?);
+    let font = Rc::new(ttf_context.load_font(
+        Path::new("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
+        14,
+    )?);
     let texture_creator = canvas.texture_creator();
 
     let mut event_pump = sdl_context.event_pump()?;
@@ -182,7 +185,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_dest = RenderDestination::new(&texture_creator, &mut canvas);
-        let constraints = RenderConstraints::new(Rect::new(0, 0, 800, 600));
+        let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (800, 600).into()));
         gui.render(&gui_state, (&mut render_dest, constraints.clone()))?;
 
         canvas.present();

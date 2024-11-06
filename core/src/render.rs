@@ -1,6 +1,6 @@
-use crate::math::{Resized, Size, Translated};
+use crate::geom::{ComponentSize, Rect, Vector};
 use crate::VuiResult;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect as SdlRect;
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::surface::Surface;
 use sdl2::video::WindowContext;
@@ -20,10 +20,6 @@ impl<'a> RenderDestination<'a> {
             canvas,
         }
     }
-
-    pub fn size(&self) -> Size {
-        self.canvas.window().size().into()
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -37,15 +33,17 @@ impl RenderConstraints {
     }
 
     pub fn clip(&self, rect: Rect) -> Option<Self> {
-        self.clip_rect.intersection(rect).map(Self::new)
+        self.clip_rect.intersection(&rect).map(Self::new)
     }
 
-    pub fn clip_topleft(&self, delta: Point) -> Option<Self> {
-        self.clip(self.clip_rect.translated(delta))
+    pub fn clip_topleft(&self, delta: Vector) -> Option<Self> {
+        self.clip(self.clip_rect.translate(delta))
     }
 
-    pub fn clip_size(&self, size: Size) -> Option<Self> {
-        self.clip(self.clip_rect.resized(size))
+    pub fn clip_size(&self, size: ComponentSize) -> Option<Self> {
+        let mut rect = self.clip_rect.clone();
+        rect.set_size(size.to_i32());
+        self.clip(rect)
     }
 }
 
@@ -59,11 +57,13 @@ impl BlitSurface for (&mut RenderDestination<'_>, RenderConstraints) {
         let texture = dest.texture_creator.create_texture_from_surface(surface)?;
         let (x, y) = {
             let rect = constraints.clip_rect;
-            (rect.x(), rect.y())
+            (rect.min.x, rect.min.y)
         };
 
         let (w, h) = surface.size();
-        dest.canvas.copy(&texture, None, Rect::new(x, y, w, h))?;
+        // TODO: Clipping when the clip_rect is smaller than the surface... can either use set_clip_rect() or do it manually...
+        //       Also note that for textures we wouldn't know the size... how do we handle that and is that relevant to this here...?
+        dest.canvas.copy(&texture, None, SdlRect::new(x, y, w, h))?;
         Ok(())
     }
 }

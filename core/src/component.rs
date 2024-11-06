@@ -1,9 +1,8 @@
-use crate::math::Size as MathSize;
+use crate::geom::{ComponentSize, Point};
 use crate::mouse::MouseButton;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::Color;
-use sdl2::rect::Point;
 use sdl2::surface::Surface;
 use sdl2::ttf::Font;
 use std::borrow::Cow;
@@ -49,7 +48,7 @@ where
 }
 
 pub trait Size {
-    fn size(&self) -> MathSize;
+    fn size(&self) -> ComponentSize;
 }
 
 impl<T> Size for T
@@ -57,7 +56,7 @@ where
     T: Deref,
     <T as Deref>::Target: Size,
 {
-    fn size(&self) -> MathSize {
+    fn size(&self) -> ComponentSize {
         self.deref().size()
     }
 }
@@ -127,12 +126,14 @@ where
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
         let event = match event {
-            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos - self.value),
+            ComponentEvent::MouseMotion(pos) => {
+                ComponentEvent::MouseMotion((pos - self.value).to_point())
+            }
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, pos - self.value)
+                ComponentEvent::MouseButtonUp(btn, (pos - self.value).to_point())
             }
             ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, pos - self.value)
+                ComponentEvent::MouseButtonDown(btn, (pos - self.value).to_point())
             }
             other => other,
         };
@@ -145,7 +146,7 @@ impl<C> Size for Position<C>
 where
     C: Size,
 {
-    fn size(&self) -> MathSize {
+    fn size(&self) -> ComponentSize {
         self.inner.size()
     }
 }
@@ -161,7 +162,7 @@ where
         state: Self::State<'_>,
         (dest, constraints): (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
-        let Some(constraints) = constraints.clip_topleft(self.value) else {
+        let Some(constraints) = constraints.clip_topleft(self.value.to_vector()) else {
             return Ok(());
         };
         self.inner.render(state, (dest, constraints))
@@ -169,13 +170,16 @@ where
 }
 
 pub trait TextRenderer {
-    fn size_of(&self, text: &str) -> VuiResult<MathSize>;
+    fn size_of(&self, text: &str) -> VuiResult<ComponentSize>;
     fn render<'a>(&self, text: &str) -> VuiResult<Surface<'a>>;
 }
 
 impl TextRenderer for (&Font<'_, '_>, Color) {
-    fn size_of(&self, text: &str) -> VuiResult<MathSize> {
-        self.0.size_of(text).map(MathSize::from).map_err(Into::into)
+    fn size_of(&self, text: &str) -> VuiResult<ComponentSize> {
+        self.0
+            .size_of(text)
+            .map(ComponentSize::from)
+            .map_err(Into::into)
     }
 
     fn render<'a>(&self, text: &str) -> VuiResult<Surface<'a>> {
@@ -184,7 +188,7 @@ impl TextRenderer for (&Font<'_, '_>, Color) {
 }
 
 impl TextRenderer for (Rc<Font<'_, '_>>, Color) {
-    fn size_of(&self, text: &str) -> VuiResult<MathSize> {
+    fn size_of(&self, text: &str) -> VuiResult<ComponentSize> {
         (self.0.as_ref(), self.1).size_of(text)
     }
 
@@ -219,11 +223,8 @@ impl<R> Size for Text<R>
 where
     R: TextRenderer,
 {
-    fn size(&self) -> MathSize {
-        self.renderer
-            .size_of(&self.text)
-            .map(MathSize::from)
-            .unwrap_or(MathSize::new(0, 0)) // TODO: components should always know their size
+    fn size(&self) -> ComponentSize {
+        self.renderer.size_of(&self.text).unwrap() // TODO: components should always know their size
     }
 }
 

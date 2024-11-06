@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod component;
+pub mod geom;
 pub mod math;
 pub mod mouse;
 pub mod render;

@@ -1,88 +1,78 @@
-use sdl2::rect::{Point, Rect};
-macro_rules! impl_max_value {
-    ($type:ident) => {
-        impl MaxValue for $type {
-            fn max_value() -> Self {
-                $type::MAX
+pub trait LossyFrom<T>: Sized {
+    #[must_use]
+    fn lossy_from(value: T) -> Self;
+}
+
+pub trait LossyInto<T> {
+    fn lossy_into(self) -> T;
+}
+
+impl<T, U> LossyInto<U> for T
+where
+    U: LossyFrom<T>,
+{
+    /// Calls `U::lossy_from(self)`.
+    ///
+    /// That is, this conversion is whatever the implementation of
+    /// <code>[LossyFrom]&lt;T&gt; for U</code> chooses to do.
+    #[inline]
+    fn lossy_into(self) -> U {
+        U::lossy_from(self)
+    }
+}
+
+macro_rules! impl_lossy_min {
+    ($from:ident -> $to:ident) => {
+        impl LossyFrom<$from> for $to {
+            fn lossy_from(value: $from) -> Self {
+                value.try_into().unwrap_or($to::MIN)
             }
         }
     };
 }
 
-pub trait MaxValue {
-    fn max_value() -> Self;
+macro_rules! impl_lossy_max {
+    ($from:ident -> $to:ident) => {
+        impl LossyFrom<$from> for $to {
+            fn lossy_from(value: $from) -> Self {
+                value.try_into().unwrap_or($to::MAX)
+            }
+        }
+    };
 }
 
-impl_max_value!(u8);
-impl_max_value!(u16);
-impl_max_value!(u32);
-impl_max_value!(u64);
-impl_max_value!(i8);
-impl_max_value!(i16);
-impl_max_value!(i32);
-impl_max_value!(i64);
+impl_lossy_min!(i32 -> u32);
+impl_lossy_max!(u32 -> i32);
 
-pub trait Convert<T>: Sized
-where
-    T: MaxValue,
-{
-    fn convert_or(self, default: T) -> T;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    fn convert_clipping(self) -> T {
-        self.convert_or(T::max_value())
+    #[test]
+    fn test_lossy_i32_u32() {
+        fn test(from: i32, expected: u32) {
+            assert_eq!(expected, u32::lossy_from(from));
+            assert_eq!(expected, from.lossy_into());
+        }
+
+        test(0, 0);
+        test(10230, 10230);
+        test(-1, 0);
+        test(i32::MIN, 0);
+        test(i32::MAX, 2147483647);
     }
-}
 
-impl<A, B> Convert<B> for A
-where
-    B: MaxValue,
-    B: TryFrom<A>,
-{
-    fn convert_or(self, default: B) -> B {
-        B::try_from(self).unwrap_or(default)
-    }
-}
+    #[test]
+    fn test_lossy_u32_i32() {
+        fn test(from: u32, expected: i32) {
+            assert_eq!(expected, i32::lossy_from(from));
+            assert_eq!(expected, from.lossy_into());
+        }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Size {
-    pub w: u32,
-    pub h: u32,
-}
-
-impl Size {
-    pub fn new(w: u32, h: u32) -> Self {
-        Self { w, h }
-    }
-}
-
-impl From<(u32, u32)> for Size {
-    fn from(tuple: (u32, u32)) -> Self {
-        let (w, h) = tuple;
-        Self { w, h }
-    }
-}
-
-pub trait Translated {
-    fn translated(&self, delta: Point) -> Self;
-}
-
-impl Translated for Rect {
-    fn translated(&self, delta: Point) -> Self {
-        Rect::new(
-            self.x() + delta.x(),
-            self.y() + delta.y(),
-            self.width(),
-            self.height(),
-        )
-    }
-}
-
-pub trait Resized {
-    fn resized(&self, size: Size) -> Self;
-}
-
-impl Resized for Rect {
-    fn resized(&self, size: Size) -> Self {
-        Rect::new(self.x(), self.y(), size.w, size.h)
+        test(0, 0);
+        test(10230, 10230);
+        test(2147483647, 2147483647);
+        test(2147483648, 2147483647);
+        test(u32::MAX, 2147483647);
     }
 }
