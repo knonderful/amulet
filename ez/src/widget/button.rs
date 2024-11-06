@@ -1,5 +1,4 @@
-use crate::widget::{Image, IntoStack};
-use crate::FramedTexture;
+use crate::widget::Image;
 use amulet_core::component::{
     ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render,
     RenderConstraints, SizeAttr,
@@ -23,24 +22,7 @@ impl ButtonState {
 }
 
 pub struct Button<'a> {
-    component: (Frame, MouseSensor, Image<'a>, Position, Frame, Image<'a>),
-}
-
-impl<'a> Button<'a> {
-    pub fn new(background: FramedTexture<'a>, label: FramedTexture<'a>) -> Self {
-        let total_size = background.rect.limit().as_size();
-        let (lbl_pos, lbl_frame, lbl_img) = label.into_stack();
-        let component = (
-            Frame::new(total_size),
-            MouseSensor::new(),
-            Image::new(background.texture),
-            lbl_pos,
-            lbl_frame,
-            lbl_img,
-        );
-
-        Self { component }
-    }
+    pub(crate) component: (Frame, MouseSensor, Image<'a>, Position, Frame),
 }
 
 impl SizeAttr for Button<'_> {
@@ -57,7 +39,7 @@ impl HandleEvent for Button<'_> {
         state: Self::State<'_>,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
-        let state = ((), &mut state.mouse_sensor, (), (), (), ());
+        let state = ((), &mut state.mouse_sensor, (), (), ());
         self.component.handle_event(state, event.clone())
     }
 }
@@ -74,7 +56,7 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
-        let state = ((), (), (), (), (), ());
+        let state = ((), (), (), (), ());
         self.component.render(state, constraints, render_ctx)
     }
 }

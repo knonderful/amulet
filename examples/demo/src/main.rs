@@ -2,7 +2,6 @@ use crate::ui::main_form::{MainForm, MainFormState};
 use amulet_core::component::{HandleEvent, Render, RenderConstraints};
 use amulet_core::geom::Rect;
 use amulet_ez::theme::Theme;
-use amulet_ez::widget::WidgetFactory;
 use amulet_sdl2::lossy::LossyInto;
 use amulet_sdl2::render::RenderContext;
 use amulet_sdl2::{event_iterator, Event};
@@ -67,15 +66,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ttf_context = sdl2::ttf::init()?;
     let texture_creator = canvas.texture_creator();
-    let theme = Theme::create(&ttf_context)?;
-    let mut widget_factory = WidgetFactory::new(&theme, &texture_creator);
+    let theme = Theme::create(&ttf_context, texture_creator)?;
 
     let mut event_pump = sdl_context.event_pump()?;
 
     let mut app_state = ChangeDetector::new(AppState::default());
     let mut main_form_state = MainFormState::default();
 
-    let mut main_form = MainForm::new(&mut widget_factory, *window_rect, app_state.click_count)?;
+    let mut main_form = MainForm::new(&theme, *window_rect, app_state.click_count)?;
 
     'running: loop {
         for event in event_iterator(&mut event_pump) {

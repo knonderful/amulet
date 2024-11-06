@@ -1,6 +1,6 @@
 use crate::geom::Vector;
 use std::fmt::{Debug, Formatter};
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Copy, Clone, Default, Eq, PartialEq, PartialOrd, Hash)]
 pub struct Size {
@@ -93,6 +93,17 @@ impl Mul<i32> for Size {
         Self {
             width: self.width * rhs,
             height: self.height * rhs,
+        }
+    }
+}
+
+impl Div<i32> for Size {
+    type Output = Self;
+
+    fn div(self, rhs: i32) -> Self::Output {
+        Self {
+            width: self.width / rhs,
+            height: self.height / rhs,
         }
     }
 }
