@@ -1,51 +1,43 @@
 use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Size};
 use crate::geom::{ComponentSize, Point, Rect};
 use crate::math::LossyInto;
-use crate::mouse::MouseClickStates;
+use crate::mouse::{ClickStates, HoverState};
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::surface::Surface;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum HoverState {
-    Undefined,
-    Inside,
-    Outside,
-}
-
-impl Default for HoverState {
-    fn default() -> Self {
-        Self::Undefined
-    }
-}
-
 #[derive(Debug, Default, Clone)]
-pub struct MouseAwareState {
+pub struct MouseSensorState {
     hover_state: HoverState,
-    click_states: MouseClickStates,
+    click_states: ClickStates,
 }
 
-impl MouseAwareState {
-    pub fn hovering(&self) -> bool {
-        self.hover_state == HoverState::Inside
+impl MouseSensorState {
+    pub fn clear_event_states(&mut self) {
+        self.hover_state.clear_event_state();
+        self.click_states.clear_event_state();
     }
 
-    pub fn click_states(&self) -> &MouseClickStates {
+    pub fn hover_state(&self) -> &HoverState {
+        &self.hover_state
+    }
+
+    pub fn click_states(&self) -> &ClickStates {
         &self.click_states
     }
 }
 
-pub struct MouseAware<C> {
+pub struct MouseSensor<C> {
     inner: C,
 }
 
-impl<C> MouseAware<C> {
+impl<C> MouseSensor<C> {
     pub fn new(inner: C) -> Self {
         Self { inner }
     }
 }
-impl<C> MouseAware<C>
+impl<C> MouseSensor<C>
 where
     C: Size,
 {
@@ -59,7 +51,7 @@ where
     }
 }
 
-impl<C> Size for MouseAware<C>
+impl<C> Size for MouseSensor<C>
 where
     C: Size,
 {
@@ -68,26 +60,21 @@ where
     }
 }
 
-impl<C> HandleEvent for MouseAware<C>
+impl<C> HandleEvent for MouseSensor<C>
 where
     C: HandleEvent + Size,
 {
-    type State<'a> = (&'a mut MouseAwareState, C::State<'a>);
+    type State<'a> = (&'a mut MouseSensorState, C::State<'a>);
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
         let (state, inner_state) = state;
 
         match event {
             ComponentEvent::LoopStart => {
-                state.click_states.clear_event_state();
+                state.clear_event_states();
             }
             ComponentEvent::MouseMotion(pos) => {
-                let new_state = if self.is_inside(pos) {
-                    HoverState::Inside
-                } else {
-                    HoverState::Outside
-                };
-                state.hover_state = new_state;
+                state.hover_state.update(self.is_inside(pos));
             }
             ComponentEvent::MouseButtonDown(btn, pos) => {
                 if self.is_inside(pos) {
@@ -109,11 +96,11 @@ where
     }
 }
 
-impl<C> Render for MouseAware<C>
+impl<C> Render for MouseSensor<C>
 where
     C: Render + Size,
 {
-    type State<'a> = (&'a MouseAwareState, C::State<'a>);
+    type State<'a> = (&'a MouseSensorState, C::State<'a>);
 
     fn render(
         &self,
@@ -121,7 +108,7 @@ where
         mut target: (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
         let (state, inner_state) = state;
-        if state.hover_state == HoverState::Inside {
+        if state.hover_state.is_hovering() {
             let size = self.size();
             let surf = Surface::new(
                 size.width.into(),
@@ -139,7 +126,7 @@ where
     }
 }
 
-impl<C> Inner for MouseAware<C> {
+impl<C> Inner for MouseSensor<C> {
     type Component = C;
 
     fn inner(&self) -> &Self::Component {
@@ -147,7 +134,7 @@ impl<C> Inner for MouseAware<C> {
     }
 }
 
-impl<C> InnerMut for MouseAware<C> {
+impl<C> InnerMut for MouseSensor<C> {
     type Component = C;
 
     fn inner_mut(&mut self) -> &mut Self::Component {

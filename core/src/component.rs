@@ -1,5 +1,5 @@
 use crate::geom::{ComponentSize, Point};
-use crate::mouse::MouseButton;
+use crate::mouse::Button;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::Color;
@@ -25,8 +25,8 @@ pub trait InnerMut {
 pub enum ComponentEvent {
     LoopStart,
     MouseMotion(Point),
-    MouseButtonDown(MouseButton, Point),
-    MouseButtonUp(MouseButton, Point),
+    MouseButtonDown(Button, Point),
+    MouseButtonUp(Button, Point),
 }
 
 pub trait HandleEvent {

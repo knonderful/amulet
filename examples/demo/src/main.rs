@@ -1,7 +1,7 @@
-use amulet_core::component::mouse_aware::{MouseAware, MouseAwareState};
+use amulet_core::component::mouse_aware::{MouseSensor, MouseSensorState};
 use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, Size, Text};
 use amulet_core::geom::{ComponentSize, Rect};
-use amulet_core::mouse::MouseButton;
+use amulet_core::mouse::Button;
 use amulet_core::render::{RenderConstraints, RenderDestination};
 use amulet_core::VuiResult;
 use sdl2::event::Event;
@@ -56,11 +56,11 @@ struct AppState {
 
 #[derive(Debug, Default)]
 struct GuiState {
-    button_state: MouseAwareState,
+    button_state: MouseSensorState,
 }
 
 struct Gui<'a> {
-    button: Position<MouseAware<Label<'a>>>,
+    button: Position<MouseSensor<Label<'a>>>,
     clicked_label: Position<Label<'a>>,
 }
 
@@ -69,7 +69,7 @@ impl<'a> Gui<'a> {
         Self {
             button: Position::new(
                 (10, 10).into(),
-                MouseAware::new(Label::new(font.clone(), "Button".into())),
+                MouseSensor::new(Label::new(font.clone(), "Button".into())),
             ),
             clicked_label: Position::new(
                 (10, 50).into(),
@@ -176,7 +176,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         if gui_state
             .button_state
             .click_states()
-            .is_click_completed(MouseButton::Left)
+            .has_click_completed(Button::Left)
         {
             app_state.click_count += 1;
         }
