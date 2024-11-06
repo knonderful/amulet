@@ -1,11 +1,11 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
+use sdl2::rect::{Point, Rect};
 use sdl2::ttf::Font;
 use std::path::PathBuf;
 use std::rc::Rc;
-use vui_core::component::{Pos, Render, Text, View, PositionalComponent};
+use vui_core::component::{ComponentEvent, HandleEvent, MouseAware, Pos, PositionalComponent, Render, Text, View};
 use vui_core::font_manager::{FontDetails, FontManager};
 use vui_core::generator::Generator;
 use vui_core::math::Convert;
@@ -20,7 +20,7 @@ struct MyGui<'ttf> {
 }
 
 impl<'ttf> Generator for MyGui<'ttf> {
-    type State = u64;
+    type State = usize;
     type Item = dyn Render + 'ttf;
 
     fn next(&self, iter_state: &mut Self::State) -> Option<&Self::Item> {
@@ -149,6 +149,18 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let view_5 = View::new(my_gui);
 
+    let mut mouse_aware = Pos::new(
+        (100, 300).into(),
+        MouseAware::new(Text::new(
+            "MOUSE AWARE".into(),
+            ().extend(font.clone()).extend(Color::RGB(
+                255,
+                0,
+                0,
+            )),
+        )),
+    );
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -157,8 +169,11 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-                Event::MouseMotion { .. } => {
-                    // TODO
+                Event::MouseMotion { x,y,.. } => {
+                    mouse_aware.handle_event(ComponentEvent::MouseMove(Point::new(x,y)))?;
+                }
+                Event::MouseButtonDown { x,y,.. } => {
+                    mouse_aware.handle_event(ComponentEvent::MouseDown(Point::new(x,y)))?;
                 }
                 // Event::Window { win_event, .. } => match win_event {
                 //     WindowEvent::SizeChanged(w, h) => {
@@ -182,6 +197,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         view_3.render((&mut render_dest, constraints.clone()))?;
         view_4.render((&mut render_dest, constraints.clone()))?;
         view_5.render((&mut render_dest, constraints.clone()))?;
+
+        mouse_aware.render((&mut render_dest, constraints.clone()))?;
 
         canvas.present();
     }

@@ -2,7 +2,7 @@ use crate::generator::{Generator, GeneratorMut};
 use crate::math::Size as MathSize;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
-use sdl2::pixels::Color;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::{Point, Rect};
 use sdl2::surface::Surface;
 use sdl2::ttf::Font;
@@ -31,7 +31,7 @@ where
 }
 
 pub trait Size {
-    fn size(&self) -> VuiResult<MathSize>;
+    fn size(&self) -> MathSize;
 }
 
 impl<T> Size for T
@@ -39,7 +39,7 @@ where
     T: Deref,
     <T as Deref>::Target: Size,
 {
-    fn size(&self) -> VuiResult<MathSize> {
+    fn size(&self) -> MathSize {
         self.deref().size()
     }
 }
@@ -101,7 +101,7 @@ impl<C> Size for Pos<C>
 where
     C: Size,
 {
-    fn size(&self) -> VuiResult<MathSize> {
+    fn size(&self) -> MathSize {
         self.inner.size()
     }
 }
@@ -176,11 +176,11 @@ impl<R> Size for Text<R>
 where
     R: TextRenderer,
 {
-    fn size(&self) -> VuiResult<MathSize> {
+    fn size(&self) -> MathSize {
         self.renderer
             .size_of(&self.text)
             .map(MathSize::from)
-            .map_err(Into::into)
+            .unwrap_or(MathSize::new(0, 0)) // TODO: components should always know their size
     }
 }
 
@@ -227,12 +227,12 @@ where
     G: Generator,
     <G as Generator>::Item: Size + Position,
 {
-    fn size(&self) -> VuiResult<MathSize> {
+    fn size(&self) -> MathSize {
         let (mut x_min, mut y_min, mut x_max, mut y_max) = (0, 0, 0, 0);
         let mut gen_state = G::State::default();
         while let Some(comp) = self.components.next(&mut gen_state) {
             let pos = comp.position();
-            let size = comp.size()?;
+            let size = comp.size();
             let cur_rect = Rect::new(pos.x(), pos.y(), size.w, size.h);
             x_min = i32::min(x_min, cur_rect.x());
             y_min = i32::min(y_min, cur_rect.y());
@@ -245,7 +245,7 @@ where
             u32::try_from(y_max - y_min).expect("y_max < y_min"),
         );
 
-        Ok(out.into())
+        out.into()
     }
 }
 
@@ -263,5 +263,76 @@ where
             comp.render((dest, constraints.clone()))?;
         }
         Ok(())
+    }
+}
+
+pub struct MouseAware<C> {
+    inner: C,
+    hover: bool,
+}
+
+impl<C> MouseAware<C> {
+    pub fn new(inner: C) -> Self {
+        Self {
+            inner,
+            hover: false,
+        }
+    }
+}
+
+impl<C> Size for MouseAware<C>
+where
+    C: Size,
+{
+    fn size(&self) -> MathSize {
+        self.inner.size()
+    }
+}
+
+impl<C> HandleEvent for MouseAware<C>
+where
+    C: HandleEvent + Size,
+{
+    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
+        match event {
+            ComponentEvent::MouseMove(pos) => {
+                let size = self.size();
+                let rect = Rect::new(0, 0, size.w, size.h);
+                if rect.contains_point(pos) {
+                    self.hover = true;
+                    println!("MOUSE MOVE");
+                } else {
+                    self.hover = false;
+                    println!("MOUSE LEFT");
+                }
+            }
+            ComponentEvent::MouseDown(pos) => {
+                let size = self.size();
+                let rect = Rect::new(0, 0, size.w, size.h);
+                if rect.contains_point(pos) {
+                    println!("MOUSE CLICK");
+                }
+            }
+        }
+        self.inner.handle_event(event)
+    }
+}
+
+impl<C> Render for MouseAware<C>
+where
+    C: Render + Size,
+{
+    fn render(&self, mut target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
+        if self.hover {
+            let size = self.size();
+            let surf = Surface::new(size.w, size.h, PixelFormatEnum::ARGB8888)?;
+            let mut canvas = surf.into_canvas()?;
+            canvas.set_draw_color(Color::RGB(0, 100, 0));
+            canvas.clear();
+            let surf = canvas.into_surface();
+            target.blit_surface(&surf)?;
+        }
+
+        self.inner.render(target)
     }
 }
