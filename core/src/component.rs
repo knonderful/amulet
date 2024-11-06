@@ -1,16 +1,14 @@
 use crate::geom::{Clip, Point, Rect, Shrink, Size, Vector};
 use crate::mouse::Button;
 use crate::VuiResult;
+pub use frame::Frame;
+pub use mouse_sensor::{MouseSensor, MouseSensorState};
+use paste::paste;
+pub use position::Position;
 
 mod frame;
 mod mouse_sensor;
-#[cfg(test)]
-mod noop;
 mod position;
-
-pub use frame::Frame;
-pub use mouse_sensor::{MouseSensor, MouseSensorState};
-pub use position::Position;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FramedPosition {
@@ -81,16 +79,6 @@ impl ComponentEvent {
     }
 }
 
-pub trait HandleEvent {
-    type State<'a>;
-
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()>;
-}
-
-pub trait CalculateSize {
-    fn calculate_size(&self) -> Size;
-}
-
 #[derive(Debug, Clone)]
 pub struct RenderConstraints {
     clip_rect: Rect,
@@ -104,17 +92,24 @@ impl RenderConstraints {
     pub fn clip_rect(&self) -> Rect {
         self.clip_rect
     }
-}
 
-impl Clip for RenderConstraints {
-    fn clip(&self, vector: Vector) -> Option<Self> {
-        self.clip_rect.clip(vector).map(Self::new)
+    pub fn clip(&self, vector: Vector) -> Self {
+        Self::new(self.clip_rect.clip(vector).unwrap_or_default())
+    }
+    pub fn shrink(&self, size: Size) -> Self {
+        Self::new(self.clip_rect.shrink(size).unwrap_or_default())
     }
 }
 
-impl Shrink for RenderConstraints {
-    fn shrink(&self, size: Size) -> Option<Self> {
-        self.clip_rect.shrink(size).map(Self::new)
+pub trait HandleEvent {
+    type State<'a>;
+
+    fn handle_event(
+        &self,
+        _state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
+        Ok(event)
     }
 }
 
@@ -123,24 +118,62 @@ pub trait Render<R> {
 
     fn render(
         &self,
-        state: Self::State<'_>,
+        _state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctxx: &mut R,
-    ) -> VuiResult<()>;
-}
-
-pub const fn component_check<T, R>()
-where
-    T: HandleEvent + Render<R>,
-{
-}
-
-pub trait Stack: Sized {
-    fn stack<N>(self, next: N) -> (N, Self);
-}
-
-impl<T> Stack for T where T: Sized {
-    fn stack<N>(self, next: N) -> (N, Self) {
-        (next, self)
+        _render_ctx: &mut R,
+    ) -> VuiResult<RenderConstraints> {
+        Ok(constraints)
     }
 }
+
+macro_rules! impl_tuple_handle_event {
+    ( () ) => {};
+    ( ( $t0:ident $(, $tx:ident)* ) ) => {
+        impl<$t0, $($tx,)*> HandleEvent for ($t0, $($tx,)*) where $t0 : HandleEvent, $($tx : HandleEvent,)* {
+            type State<'a> = ($t0::State<'a>, $($tx::State<'a>,)*);
+
+            fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<ComponentEvent> {
+                paste!{
+                    let ([<$t0:lower>], $([<$tx:lower>],)*) = self;
+                    let ([<$t0:lower _state>], $([<$tx:lower _state>],)*) = state;
+
+                    let event = [<$t0:lower>].handle_event([<$t0:lower _state>], event)?;
+                    $(
+                    let event = [<$tx:lower>].handle_event([<$tx:lower _state>], event)?;
+                    )*
+                }
+                Ok(event)
+            }
+        }
+
+        impl_tuple_handle_event! { ($($tx),*) }
+    };
+}
+
+macro_rules! impl_tuple_render {
+    ( () ) => {};
+    ( ( $t0:ident $(, $tx:ident)* ) ) => {
+        impl<RdrCtx, $t0, $($tx,)*> Render<RdrCtx> for ($t0, $($tx,)*) where $t0 : Render<RdrCtx>, $($tx : Render<RdrCtx>,)* {
+            type State<'a> = ($t0::State<'a>, $($tx::State<'a>,)*);
+
+            fn render(&self, state: Self::State<'_>, constraints: RenderConstraints, render_ctx: &mut RdrCtx) -> VuiResult<RenderConstraints> {
+                paste!{
+                    let ([<$t0:lower>], $([<$tx:lower>],)*) = self;
+                    let ([<$t0:lower _state>], $([<$tx:lower _state>],)*) = state;
+
+                    let constraints = [<$t0:lower>].render([<$t0:lower _state>], constraints, render_ctx)?;
+                    $(
+                    let constraints = [<$tx:lower>].render([<$tx:lower _state>], constraints, render_ctx)?;
+                    )*
+                }
+                Ok(constraints)
+            }
+
+        }
+
+        impl_tuple_render! { ($($tx),*) }
+    };
+}
+
+impl_tuple_handle_event! {(A, B, C, E, F, G, H, I, J, K)}
+impl_tuple_render! {(A, B, C, E, F, G, H, I, J, K)}

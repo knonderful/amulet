@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 euclid = "0.22"
+paste = "1"

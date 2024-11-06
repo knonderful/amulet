@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
+use crate::component::{ComponentEvent, HandleEvent, Render};
 use crate::mouse::{ClickStates, HoverState};
 use crate::VuiResult;
 
@@ -23,7 +23,7 @@ impl MouseSensorState {
     }
 }
 
-pub struct MouseSensor{}
+pub struct MouseSensor {}
 
 impl MouseSensor {
     pub fn new() -> Self {
@@ -31,15 +31,14 @@ impl MouseSensor {
     }
 }
 
-impl<C> HandleEvent for (MouseSensor, C)
-where
-    C: HandleEvent,
-{
-    type State<'a> = (&'a mut MouseSensorState, C::State<'a>);
+impl HandleEvent for MouseSensor {
+    type State<'a> = &'a mut MouseSensorState;
 
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let (state, inner_state) = state;
-
+    fn handle_event(
+        &self,
+        state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
         match &event {
             ComponentEvent::LoopStart => {
                 state.clear_event_states();
@@ -63,32 +62,10 @@ where
             }
         }
 
-        self.1.handle_event(inner_state, event)
+        Ok(event)
     }
 }
 
-impl<C, R> Render<R> for (MouseSensor, C)
-where
-    C: Render<R>,
-{
-    type State<'a> = C::State<'a>;
-
-    fn render(
-        &self,
-        state: Self::State<'_>,
-        constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        self.1.render(state, constraints, render_ctx)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::component::component_check;
-    use crate::component::noop::Noop;
-
-    // Static check that we have all component traits implemented
-    const _: () = component_check::<(MouseSensor, Noop), ()>();
+impl<R> Render<R> for MouseSensor {
+    type State<'a> = ();
 }

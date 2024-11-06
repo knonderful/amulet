@@ -1,8 +1,5 @@
-use amulet_core::component::{
-    ComponentEvent, HandleEvent, Position, Render, RenderConstraints, Stack,
-};
+use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
 use amulet_core::geom::Rect;
-use amulet_core::mouse::Button as MouseButton;
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
 use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
@@ -11,8 +8,6 @@ use amulet_sdl2::{event_iterator, Event};
 use sdl2::event::Event as SdlEvent;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use std::path::Path;
-use std::rc::Rc;
 
 #[derive(Debug, Default)]
 struct AppState {
@@ -29,24 +24,42 @@ struct Gui<'a> {
 }
 
 impl<'a> Gui<'a> {
-    fn new(widget_factory: &'a mut WidgetFactory, _click_count: u64) -> VuiResult<Self> {
+    fn create_button(
+        widget_factory: &mut WidgetFactory<'a>,
+        click_count: u64,
+    ) -> VuiResult<(Position, Button<'a>)> {
+        Ok((
+            Position::new((30, 20).into()),
+            widget_factory.button(&format!("EZ Button ({} clicks)", click_count))?,
+        ))
+    }
+
+    fn new(widget_factory: &mut WidgetFactory<'a>, _click_count: u64) -> VuiResult<Self> {
         Ok(Self {
-            button: widget_factory
-                .button("EZ Button")?
-                .stack(Position::new((30, 20).into())),
+            button: Self::create_button(widget_factory, _click_count)?,
         })
     }
 
-    fn update(&mut self, _click_count: u64) {}
+    fn update(
+        &mut self,
+        widget_factory: &mut WidgetFactory<'a>,
+        click_count: u64,
+    ) -> VuiResult<()> {
+        self.button = Self::create_button(widget_factory, click_count)?;
+        Ok(())
+    }
 }
 
 impl HandleEvent for Gui<'_> {
     type State<'a> = &'a mut GuiState;
 
-    fn handle_event(&self, gui_state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
+    fn handle_event(
+        &self,
+        gui_state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
         self.button
-            .handle_event(&mut gui_state.button_state, event)?;
-        Ok(())
+            .handle_event(((), &mut gui_state.button_state), event)
     }
 }
 
@@ -61,10 +74,12 @@ where
         gui_state: Self::State<'_>,
         constraints: RenderConstraints,
         render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        self.button
-            .render(&gui_state.button_state, constraints, render_ctx)?;
-        Ok(())
+    ) -> VuiResult<RenderConstraints> {
+        self.button.render(
+            ((), &gui_state.button_state),
+            constraints.clone(),
+            render_ctx,
+        )
     }
 }
 
@@ -79,7 +94,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     let mut canvas = window.into_canvas().present_vsync().build()?;
-
 
     let ttf_context = sdl2::ttf::init()?;
     let texture_creator = canvas.texture_creator();
@@ -111,28 +125,20 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // if gui_state
-        //     .button_state
-        //     .click_states()
-        //     .has_click_completed(MouseButton::Left)
-        // {
-        //     app_state.click_count += 1;
-        // }
+        if gui_state.button_state.was_clicked() {
+            app_state.click_count += 1;
+        }
 
         canvas.set_draw_color(Color::RGB(0x3c, 0x3f, 0x41));
         canvas.clear();
 
-        // let x = theme.label("hello")?.as_texture(&texture_creator)?;
-        // canvas.set_viewport(sdl2::rect::Rect::new(100, 100, 30, 40));
-        // canvas.copy(&x, None, None)?;
-
-        let mut render_ctx = RenderContext::new(&texture_creator, &mut canvas);
+        let mut render_ctx = RenderContext::new(&mut canvas);
         let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (800, 600).into()));
         gui.render(&gui_state, constraints, &mut render_ctx)?;
 
         canvas.present();
 
-        gui.update(app_state.click_count);
+        gui.update(&mut widget_factory, app_state.click_count)?;
     }
 
     Ok(())

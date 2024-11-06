@@ -12,23 +12,19 @@ pub struct WidgetFactory<'a> {
 }
 
 impl<'a> WidgetFactory<'a> {
-    pub fn new(
-        theme: &'a Theme<'a>,
-        texture_creator: &'a TextureCreator<WindowContext>,
-    ) -> Self {
+    pub fn new(theme: &'a Theme<'a>, texture_creator: &'a TextureCreator<WindowContext>) -> Self {
         Self {
             theme,
             texture_creator,
         }
     }
-}
 
-impl WidgetFactory<'_> {
-    pub fn button(&mut self, text: &str) -> VuiResult<Button<'_>> {
+    pub fn button(&mut self, text: &str) -> VuiResult<Button<'a>> {
         let label = self.theme.label(text)?;
         let label_size = Size::from(label.size());
-        let (padding_h, padding_v) = (5,3);
-        let label_rect = Rect::from_origin_and_size(Point::new(padding_h, padding_v), label_size.cast());
+        let (padding_h, padding_v) = (5, 3);
+        let label_rect =
+            Rect::from_origin_and_size(Point::new(padding_h, padding_v), label_size.cast());
         let button_rect = label_rect.inflate(padding_h, padding_v);
         let button = self.theme.button(button_rect.size().cast())?;
 

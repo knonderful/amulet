@@ -1,4 +1,3 @@
-use sdl2::gfx::primitives::DrawRenderer;
 use amulet_core::geom::{Rect, Size};
 use amulet_core::{VuiError, VuiResult};
 use sdl2::pixels::{Color, PixelFormatEnum};
@@ -53,13 +52,28 @@ trait CanvasExt {
     fn draw_border(&mut self, rect: Rect) -> VuiResult<()>;
 }
 
-impl<T> CanvasExt for Canvas<T> where T: RenderTarget {
+impl<T> CanvasExt for Canvas<T>
+where
+    T: RenderTarget,
+{
     fn draw_border(&mut self, rect: Rect) -> VuiResult<()> {
         let (x, y) = rect.max.into();
-        self.draw_line(sdl2::rect::Point::new(1,0), sdl2::rect::Point::new(x-1, 0))?;
-        self.draw_line(sdl2::rect::Point::new(x,1), sdl2::rect::Point::new(x, y-1))?;
-        self.draw_line(sdl2::rect::Point::new(1,y-1), sdl2::rect::Point::new(x-1, y-1))?;
-        self.draw_line(sdl2::rect::Point::new(0,1), sdl2::rect::Point::new(0, y-1))?;
+        self.draw_line(
+            sdl2::rect::Point::new(1, 0),
+            sdl2::rect::Point::new(x - 1, 0),
+        )?;
+        self.draw_line(
+            sdl2::rect::Point::new(x, 1),
+            sdl2::rect::Point::new(x, y - 1),
+        )?;
+        self.draw_line(
+            sdl2::rect::Point::new(1, y - 1),
+            sdl2::rect::Point::new(x - 1, y - 1),
+        )?;
+        self.draw_line(
+            sdl2::rect::Point::new(0, 1),
+            sdl2::rect::Point::new(0, y - 1),
+        )?;
         Ok(())
     }
 }

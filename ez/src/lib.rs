@@ -1,6 +1,6 @@
-use std::rc::Rc;
 use amulet_core::geom::{Rect, Size};
 use sdl2::render::Texture;
+use std::rc::Rc;
 
 pub mod theme;
 pub mod widget;
@@ -13,7 +13,10 @@ pub struct FramedTexture<'a> {
 
 impl<'a> FramedTexture<'a> {
     pub fn new(rect: Rect, texture: Texture<'a>) -> Self {
-        Self { rect, texture: Rc::new(texture) }
+        Self {
+            rect,
+            texture: Rc::new(texture),
+        }
     }
 }
 

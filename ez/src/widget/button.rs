@@ -2,30 +2,15 @@ use crate::widget::{Image, IntoStack};
 use crate::FramedTexture;
 use amulet_core::component::{
     ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render,
-    RenderConstraints, Stack,
+    RenderConstraints,
 };
 use amulet_core::mouse::Button as MouseButton;
 use amulet_core::VuiResult;
 use amulet_sdl2::render::SdlRender;
 
-pub struct TupleEz<T, U>(T, U);
-
-pub trait StackEz: Sized {
-    fn stack_ez<N>(self, next: N) -> TupleEz<N, Self>;
-}
-
-impl<T> StackEz for T
-    where
-        T: Sized,
-{
-    fn stack_ez<N>(self, next: N) -> TupleEz<N, Self> {
-        TupleEz(next, self)
-    }
-}
-
 struct ButtonRender<'a> {
-    unclicked: (Position, (Frame, Image<'a>)),
-    clicked: (Position, (Frame, Image<'a>)),
+    unclicked: (Position, Frame, Image<'a>),
+    clicked: (Position, Frame, Image<'a>),
 }
 
 impl<'a> ButtonRender<'a> {
@@ -37,40 +22,31 @@ impl<'a> ButtonRender<'a> {
     }
 }
 
-
-impl<C> HandleEvent for TupleEz<ButtonRender<'_>, C>
-where
-    C: HandleEvent,
-{
-    type State<'a> = C::State<'a>;
-
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let TupleEz(_, next) = &self;
-        next.handle_event(state, event)
-    }
+impl HandleEvent for ButtonRender<'_> {
+    type State<'a> = ();
 }
 
-impl<C, R> Render<R> for TupleEz<ButtonRender<'_>, C>
+impl<R> Render<R> for ButtonRender<'_>
 where
-    C: Render<R>,
     R: SdlRender,
 {
-    type State<'a> = (&'a MouseSensorState, C::State<'a>);
+    type State<'a> = &'a MouseSensorState;
 
     fn render(
         &self,
-        (ms_state, inner_state): Self::State<'_>,
+        state: Self::State<'_>,
         constraints: RenderConstraints,
         render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        let TupleEz(me, next) = &self;
-        if ms_state.click_states().is_down(MouseButton::Left) {
-            me.clicked.render((), constraints.clone(), render_ctx)?;
+    ) -> VuiResult<RenderConstraints> {
+        let state_stack = ((), (), ());
+        if state.click_states().is_down(MouseButton::Left) {
+            self.clicked
+                .render(state_stack, constraints.clone(), render_ctx)?;
         } else {
-            me.unclicked.render((), constraints.clone(), render_ctx)?;
+            self.unclicked
+                .render(state_stack, constraints.clone(), render_ctx)?;
         }
-
-        next.render(inner_state, constraints, render_ctx)
+        Ok(constraints)
     }
 }
 
@@ -90,7 +66,7 @@ impl ButtonState {
 pub struct Button<'a> {
     #[allow(clippy::type_complexity)]
     #[rustfmt::skip]
-    component: (Frame, (MouseSensor, TupleEz<ButtonRender<'a>, (Position, (Frame, Image<'a>))>), ),
+    component: (Frame, MouseSensor, ButtonRender<'a>, Position, Frame, Image<'a>),
 }
 
 impl<'a> Button<'a> {
@@ -107,13 +83,30 @@ impl<'a> Button<'a> {
             .to_vector()
             .into();
 
-        let component = label
-            .into_stack()
-            .stack_ez(ButtonRender::new(button_unclicked, button_clicked))
-            .stack(MouseSensor::new())
-            .stack(Frame::new(total_size));
+        let (lbl_pos, lbl_frame, lbl_img) = label.into_stack();
+        let component = (
+            Frame::new(total_size),
+            MouseSensor::new(),
+            ButtonRender::new(button_unclicked, button_clicked),
+            lbl_pos,
+            lbl_frame,
+            lbl_img,
+        );
 
         Self { component }
+    }
+}
+
+impl HandleEvent for Button<'_> {
+    type State<'a> = &'a mut ButtonState;
+
+    fn handle_event(
+        &self,
+        state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
+        let state = ((), &mut state.mouse_sensor, (), (), (), ());
+        self.component.handle_event(state, event)
     }
 }
 
@@ -128,27 +121,8 @@ where
         state: Self::State<'_>,
         constraints: RenderConstraints,
         render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        let state = ().stack(&state.mouse_sensor);
+    ) -> VuiResult<RenderConstraints> {
+        let state = ((), (), &state.mouse_sensor, (), (), ());
         self.component.render(state, constraints, render_ctx)
     }
-}
-
-impl HandleEvent for Button<'_> {
-    type State<'a> = &'a mut ButtonState;
-
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        self.component
-            .handle_event((&mut state.mouse_sensor, ()), event)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use amulet_sdl2::render::RenderContext;
-
-    use super::*;
-
-    // Static check that we have all component traits implemented
-    const _: () = amulet_core::component::component_check::<Button, &mut RenderContext>();
 }

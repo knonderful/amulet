@@ -1,5 +1,5 @@
 use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
-use crate::geom::{Clip, Point};
+use crate::geom::Point;
 use crate::VuiResult;
 
 #[derive(Debug, Clone, Default)]
@@ -17,44 +17,27 @@ impl Position {
     }
 }
 
-impl<C> HandleEvent for (Position, C)
-where
-    C: HandleEvent,
-{
-    type State<'a> = C::State<'a>;
+impl HandleEvent for Position {
+    type State<'a> = ();
 
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let (me, next) = self;
-        next.handle_event(state, event.clip(me.value.to_vector()))
+    fn handle_event(
+        &self,
+        _state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
+        Ok(event.clip(self.value.to_vector()))
     }
 }
 
-impl<C, R> Render<R> for (Position, C)
-where
-    C: Render<R>,
-{
-    type State<'a> = C::State<'a>;
+impl<R> Render<R> for Position {
+    type State<'a> = ();
 
     fn render(
         &self,
-        state: Self::State<'_>,
+        _state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        let (me, next) = self;
-        let Some(constraints) = constraints.clip(me.value.to_vector()) else {
-            return Ok(());
-        };
-        next.render(state, constraints, render_ctx)
+        _render_ctx: &mut R,
+    ) -> VuiResult<RenderConstraints> {
+        Ok(constraints.clip(self.value.to_vector()))
     }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::component::component_check;
-    use crate::component::noop::Noop;
-
-    // Static check that we have all component traits implemented
-    const _: () = component_check::<(Position, Noop), ()>();
 }

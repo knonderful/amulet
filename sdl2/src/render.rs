@@ -1,6 +1,6 @@
 use amulet_core::component::RenderConstraints;
-use sdl2::render::{Canvas, RenderTarget, TextureCreator, WindowCanvas};
-use sdl2::video::{Window, WindowContext};
+use sdl2::render::{Canvas, RenderTarget, WindowCanvas};
+use sdl2::video::Window;
 use std::ops::DerefMut;
 
 pub trait SdlRender {
@@ -21,19 +21,12 @@ where
 }
 
 pub struct RenderContext<'a> {
-    texture_creator: &'a TextureCreator<WindowContext>,
     canvas: &'a mut WindowCanvas,
 }
 
 impl<'a> RenderContext<'a> {
-    pub fn new(
-        texture_creator: &'a TextureCreator<WindowContext>,
-        canvas: &'a mut WindowCanvas,
-    ) -> Self {
-        Self {
-            texture_creator,
-            canvas,
-        }
+    pub fn new(canvas: &'a mut WindowCanvas) -> Self {
+        Self { canvas }
     }
 }
 
@@ -46,6 +39,6 @@ impl SdlRender for RenderContext<'_> {
         let (w, h) = rect.size().cast().into();
         self.canvas
             .set_viewport(sdl2::rect::Rect::new(origin.x, origin.y, w, h));
-        &mut self.canvas
+        self.canvas
     }
 }

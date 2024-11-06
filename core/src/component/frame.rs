@@ -1,5 +1,5 @@
-use crate::component::{CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints};
-use crate::geom::{Shrink, Size};
+use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
+use crate::geom::Size;
 use crate::VuiResult;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -13,50 +13,27 @@ impl Frame {
     }
 }
 
-impl<C> HandleEvent for (Frame, C)
-where
-    C: HandleEvent,
-{
-    type State<'a> = C::State<'a>;
+impl HandleEvent for Frame {
+    type State<'a> = ();
 
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let (me, next) = self;
-        next.handle_event(state, event.shrink(me.size))
+    fn handle_event(
+        &self,
+        _state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
+        Ok(event.shrink(self.size))
     }
 }
 
-impl<C, R> Render<R> for (Frame, C)
-where
-    C: Render<R>,
-{
-    type State<'a> = C::State<'a>;
+impl<R> Render<R> for Frame {
+    type State<'a> = ();
 
     fn render(
         &self,
-        state: Self::State<'_>,
+        _state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<()> {
-        let (me, next) = self;
-        let Some(constraints) = constraints.shrink(me.size) else {
-            return Ok(());
-        };
-        next.render(state, constraints, render_ctx)
+        _render_ctx: &mut R,
+    ) -> VuiResult<RenderConstraints> {
+        Ok(constraints.shrink(self.size))
     }
-}
-
-impl CalculateSize for Frame {
-    fn calculate_size(&self) -> Size {
-        self.size
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::component::noop::Noop;
-    use crate::component::component_check;
-
-    // Static check that we have all component traits implemented
-    const _: () = component_check::<(Frame, Noop), ()>();
 }
