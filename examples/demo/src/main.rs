@@ -16,12 +16,18 @@ struct AppState {
 
 #[derive(Debug, Default)]
 struct MainFormState {
-    button_state: ButtonState,
+    button: ButtonState,
+    btn_ok: ButtonState,
+    btn_cancel: ButtonState,
+    btn_defaults: ButtonState,
 }
 
 struct MainForm<'a> {
     widget_factory: &'a mut WidgetFactory<'a>,
     button: (Position, Button<'a>),
+    btn_ok: (Position, Button<'a>),
+    btn_cancel: (Position, Button<'a>),
+    btn_defaults: (Position, Button<'a>),
 }
 
 impl<'a> MainForm<'a> {
@@ -37,9 +43,18 @@ impl<'a> MainForm<'a> {
 
     fn new(widget_factory: &'a mut WidgetFactory<'a>, _click_count: u64) -> VuiResult<Self> {
         let button = Self::create_button(widget_factory, _click_count)?;
+        let mut buttons = widget_factory
+            .button_set(&["OK", "Cancel", "Defaults"])?
+            .into_iter();
+        let btn_ok = (Position::new((10, 100).into()), buttons.next().unwrap());
+        let btn_cancel = (Position::new((10, 130).into()), buttons.next().unwrap());
+        let btn_defaults = (Position::new((10, 160).into()), buttons.next().unwrap());
         Ok(Self {
             widget_factory,
             button,
+            btn_ok,
+            btn_cancel,
+            btn_defaults,
         })
     }
 
@@ -54,11 +69,19 @@ impl HandleEvent for MainForm<'_> {
 
     fn handle_event(
         &self,
-        gui_state: Self::State<'_>,
+        gui_state: &mut MainFormState,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
-        self.button
-            .handle_event(((), &mut gui_state.button_state), event)
+        for (c, mut s) in [
+            (&self.button, &mut gui_state.button),
+            (&self.btn_ok, &mut gui_state.btn_ok),
+            (&self.btn_cancel, &mut gui_state.btn_cancel),
+            (&self.btn_defaults, &mut gui_state.btn_defaults),
+        ] {
+            c.handle_event(((), &mut s), event.clone())?;
+        }
+        // Kind of nonsensical =)
+        Ok(event)
     }
 }
 
@@ -74,11 +97,16 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
-        self.button.render(
-            ((), &gui_state.button_state),
-            constraints.clone(),
-            render_ctx,
-        )
+        for (c, s) in [
+            (&self.button, &gui_state.button),
+            (&self.btn_ok, &gui_state.btn_ok),
+            (&self.btn_cancel, &gui_state.btn_cancel),
+            (&self.btn_defaults, &gui_state.btn_defaults),
+        ] {
+            c.render(((), &s), constraints.clone(), render_ctx)?;
+        }
+        // Kind of nonsensical =)
+        Ok(constraints)
     }
 }
 
@@ -136,7 +164,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if main_form_state.button_state.was_clicked() {
+        if main_form_state.button.was_clicked() {
             app_state.click_count += 1;
         }
 

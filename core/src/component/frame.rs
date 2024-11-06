@@ -11,6 +11,10 @@ impl Frame {
     pub fn new(size: Size) -> Self {
         Self { size }
     }
+
+    pub fn size(&self) -> Size {
+        self.size
+    }
 }
 
 impl HandleEvent for Frame {
