@@ -20,6 +20,7 @@ struct GuiState {
 }
 
 struct Gui<'a> {
+    widget_factory: &'a mut WidgetFactory<'a>,
     button: (Position, Button<'a>),
 }
 
@@ -34,18 +35,16 @@ impl<'a> Gui<'a> {
         ))
     }
 
-    fn new(widget_factory: &mut WidgetFactory<'a>, _click_count: u64) -> VuiResult<Self> {
+    fn new(widget_factory: &'a mut WidgetFactory<'a>, _click_count: u64) -> VuiResult<Self> {
+        let button = Self::create_button(widget_factory, _click_count)?;
         Ok(Self {
-            button: Self::create_button(widget_factory, _click_count)?,
+            widget_factory,
+            button,
         })
     }
 
-    fn update(
-        &mut self,
-        widget_factory: &mut WidgetFactory<'a>,
-        click_count: u64,
-    ) -> VuiResult<()> {
-        self.button = Self::create_button(widget_factory, click_count)?;
+    fn update(&mut self, click_count: u64) -> VuiResult<()> {
+        self.button = Self::create_button(self.widget_factory, click_count)?;
         Ok(())
     }
 }
@@ -138,7 +137,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         canvas.present();
 
-        gui.update(&mut widget_factory, app_state.click_count)?;
+        gui.update(app_state.click_count)?;
     }
 
     Ok(())
