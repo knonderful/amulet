@@ -4,7 +4,7 @@ use amulet_core::component::{
     MouseSensorState, Position, SizeAttr,
 };
 use amulet_core::geom::Size;
-use amulet_core::mouse::Button as MouseButton;
+use amulet_core::mouse::MouseButton;
 use amulet_core::VuiResult;
 use amulet_sdl2::render::{Render, RenderContext};
 

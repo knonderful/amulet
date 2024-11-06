@@ -1,6 +1,6 @@
 use crate::component::{ComponentEvent, FramedPosition};
 use crate::geom::{Point, Rect};
-use crate::mouse::Button;
+use crate::mouse::MouseButton;
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod bitops;
@@ -39,8 +39,8 @@ impl From<String> for VuiError {
 pub enum GlobalEvent {
     LoopStart,
     MouseMotion(Point),
-    MouseButtonDown(Button, Point),
-    MouseButtonUp(Button, Point),
+    MouseButtonDown(MouseButton, Point),
+    MouseButtonUp(MouseButton, Point),
 }
 
 impl GlobalEvent {

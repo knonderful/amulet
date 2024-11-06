@@ -5,13 +5,13 @@ use sdl2::EventPump;
 pub mod lossy;
 pub mod render;
 
-fn map_mouse_button(value: sdl2::mouse::MouseButton) -> Option<mouse::Button> {
+fn map_mouse_button(value: sdl2::mouse::MouseButton) -> Option<mouse::MouseButton> {
     use sdl2::mouse::MouseButton as MB;
     let out = match value {
         MB::Unknown | MB::X1 | MB::X2 => return None,
-        MB::Left => mouse::Button::Left,
-        MB::Middle => mouse::Button::Middle,
-        MB::Right => mouse::Button::Right,
+        MB::Left => mouse::MouseButton::Left,
+        MB::Middle => mouse::MouseButton::Middle,
+        MB::Right => mouse::MouseButton::Right,
     };
     Some(out)
 }

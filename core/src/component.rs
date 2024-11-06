@@ -1,5 +1,5 @@
 use crate::geom::{Point, Rect, Size, Vector};
-use crate::mouse::Button;
+use crate::mouse::MouseButton;
 use crate::VuiResult;
 pub use frame::Frame;
 pub use mouse_sensor::{MouseSensor, MouseSensorState};
@@ -47,8 +47,8 @@ impl FramedPosition {
 pub enum ComponentEvent {
     LoopStart,
     MouseMotion(FramedPosition),
-    MouseButtonDown(Button, FramedPosition),
-    MouseButtonUp(Button, FramedPosition),
+    MouseButtonDown(MouseButton, FramedPosition),
+    MouseButtonUp(MouseButton, FramedPosition),
 }
 
 impl ComponentEvent {

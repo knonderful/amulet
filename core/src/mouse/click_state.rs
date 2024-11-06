@@ -1,5 +1,5 @@
 use crate::bitops::{ClearBits, IsSet, SetBits};
-use crate::mouse::Button;
+use crate::mouse::MouseButton;
 use std::fmt::{Debug, Formatter};
 
 #[derive(Default, Clone, Eq, PartialEq)]
@@ -14,7 +14,7 @@ impl Debug for ClickStates {
     }
 }
 
-fn mask_for(btn: Button) -> u8 {
+fn mask_for(btn: MouseButton) -> u8 {
     1 << btn as u8
 }
 
@@ -23,31 +23,31 @@ impl ClickStates {
         self.event_state = 0;
     }
 
-    pub fn has_click_started(&self, btn: Button) -> bool {
+    pub fn has_click_started(&self, btn: MouseButton) -> bool {
         let mask = mask_for(btn);
         self.click_state.is_set(mask) && self.event_state.is_set(mask)
     }
 
-    pub fn has_click_completed(&self, btn: Button) -> bool {
+    pub fn has_click_completed(&self, btn: MouseButton) -> bool {
         let mask = mask_for(btn);
         !self.click_state.is_set(mask) && self.event_state.is_set(mask)
     }
 
-    pub fn is_up(&self, btn: Button) -> bool {
+    pub fn is_up(&self, btn: MouseButton) -> bool {
         !self.click_state.is_set(mask_for(btn))
     }
 
-    pub fn is_down(&self, btn: Button) -> bool {
+    pub fn is_down(&self, btn: MouseButton) -> bool {
         self.click_state.is_set(mask_for(btn))
     }
 
-    pub fn click(&mut self, btn: Button) {
+    pub fn click(&mut self, btn: MouseButton) {
         let mask = mask_for(btn);
         self.click_state |= mask;
         self.event_state |= mask;
     }
 
-    pub fn unclick(&mut self, btn: Button) {
+    pub fn unclick(&mut self, btn: MouseButton) {
         let mask = mask_for(btn);
 
         if self.click_state.is_set(mask) {
@@ -59,7 +59,7 @@ impl ClickStates {
         self.click_state.clear_bits(mask);
     }
 
-    pub fn clear(&mut self, btn: Button) {
+    pub fn clear(&mut self, btn: MouseButton) {
         let mask = mask_for(btn);
         self.click_state.clear_bits(mask);
         self.event_state.clear_bits(mask);
@@ -86,44 +86,44 @@ mod test {
         let mut mcs = ClickStates::default();
         mcs.check_flags(0b000, 0b000);
 
-        mcs.click(Button::Middle);
+        mcs.click(MouseButton::Middle);
         mcs.check_flags(0b010, 0b010);
-        assert!(mcs.has_click_started(Button::Middle));
-        assert!(mcs.is_down(Button::Middle));
+        assert!(mcs.has_click_started(MouseButton::Middle));
+        assert!(mcs.is_down(MouseButton::Middle));
 
-        mcs.unclick(Button::Middle);
+        mcs.unclick(MouseButton::Middle);
         mcs.check_flags(0b000, 0b010);
-        assert!(mcs.has_click_completed(Button::Middle));
-        assert!(mcs.is_up(Button::Middle));
+        assert!(mcs.has_click_completed(MouseButton::Middle));
+        assert!(mcs.is_up(MouseButton::Middle));
 
-        mcs.click(Button::Right);
+        mcs.click(MouseButton::Right);
         mcs.check_flags(0b100, 0b110);
-        assert!(mcs.has_click_completed(Button::Middle));
-        assert!(mcs.is_up(Button::Middle));
-        assert!(mcs.has_click_started(Button::Right));
-        assert!(mcs.is_down(Button::Right));
+        assert!(mcs.has_click_completed(MouseButton::Middle));
+        assert!(mcs.is_up(MouseButton::Middle));
+        assert!(mcs.has_click_started(MouseButton::Right));
+        assert!(mcs.is_down(MouseButton::Right));
 
         mcs.clear_event_state();
         mcs.check_flags(0b100, 0b000);
-        assert!(!mcs.has_click_started(Button::Middle));
-        assert!(!mcs.has_click_completed(Button::Middle));
-        assert!(mcs.is_up(Button::Middle));
-        assert!(!mcs.has_click_started(Button::Right));
-        assert!(!mcs.has_click_completed(Button::Right));
-        assert!(mcs.is_down(Button::Right));
+        assert!(!mcs.has_click_started(MouseButton::Middle));
+        assert!(!mcs.has_click_completed(MouseButton::Middle));
+        assert!(mcs.is_up(MouseButton::Middle));
+        assert!(!mcs.has_click_started(MouseButton::Right));
+        assert!(!mcs.has_click_completed(MouseButton::Right));
+        assert!(mcs.is_down(MouseButton::Right));
 
-        mcs.click(Button::Left);
+        mcs.click(MouseButton::Left);
         mcs.check_flags(0b101, 0b001);
-        assert!(mcs.has_click_started(Button::Left));
+        assert!(mcs.has_click_started(MouseButton::Left));
 
-        mcs.clear(Button::Right);
+        mcs.clear(MouseButton::Right);
         mcs.check_flags(0b001, 0b001);
-        assert!(!mcs.has_click_completed(Button::Right));
+        assert!(!mcs.has_click_completed(MouseButton::Right));
 
-        mcs.unclick(Button::Middle);
+        mcs.unclick(MouseButton::Middle);
         // This is a special case: a mouse-up on a button that has not been "started" should not
         // result in a click-completed.
-        assert!(!mcs.has_click_completed(Button::Middle));
+        assert!(!mcs.has_click_completed(MouseButton::Middle));
         mcs.check_flags(0b001, 0b001);
     }
 }
