@@ -1,4 +1,3 @@
-use crate::map_error;
 use crate::render::SdlRender;
 use amulet_core::component::{
     CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints,

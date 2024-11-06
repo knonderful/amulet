@@ -23,17 +23,15 @@ impl MouseSensorState {
     }
 }
 
-pub struct MouseSensor<C> {
-    inner: C,
-}
+pub struct MouseSensor{}
 
-impl<C> MouseSensor<C> {
-    pub fn new(inner: C) -> Self {
-        Self { inner }
+impl MouseSensor {
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
-impl<C> HandleEvent for MouseSensor<C>
+impl<C> HandleEvent for (MouseSensor, C)
 where
     C: HandleEvent,
 {
@@ -65,11 +63,11 @@ where
             }
         }
 
-        self.inner.handle_event(inner_state, event)
+        self.1.handle_event(inner_state, event)
     }
 }
 
-impl<C, R> Render<R> for MouseSensor<C>
+impl<C, R> Render<R> for (MouseSensor, C)
 where
     C: Render<R>,
 {
@@ -81,7 +79,7 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<()> {
-        self.inner.render(state.1, constraints, render_ctx)
+        self.1.render(state.1, constraints, render_ctx)
     }
 }
 
@@ -92,5 +90,5 @@ mod test {
     use crate::component::noop::Noop;
 
     // Static check that we have all component traits implemented
-    const _: () = component_check::<MouseSensor<Noop>, ()>();
+    const _: () = component_check::<(MouseSensor, Noop), ()>();
 }

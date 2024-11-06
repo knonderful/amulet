@@ -1,9 +1,8 @@
-use amulet_core::{mouse, GlobalEvent, VuiError};
+use amulet_core::{mouse, GlobalEvent};
 use sdl2::event::Event as SdlEvent;
 use sdl2::render::TextureValueError;
 use sdl2::ttf::FontError;
 use sdl2::EventPump;
-use std::fmt::Display;
 
 pub mod render;
 pub mod temp_components;
@@ -80,11 +79,4 @@ impl TypeName for FontError {
     fn type_name() -> &'static str {
         "FontError"
     }
-}
-
-fn map_error<T>(e: T) -> VuiError
-where
-    T: Display + TypeName,
-{
-    VuiError::new(format!("{}: {}", T::type_name(), e))
 }

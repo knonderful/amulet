@@ -4,6 +4,7 @@ use crate::VuiResult;
 
 mod frame;
 mod mouse_sensor;
+#[cfg(test)]
 mod noop;
 mod position;
 
@@ -124,7 +125,7 @@ pub trait Render<R> {
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: &mut R,
+        render_ctxx: &mut R,
     ) -> VuiResult<()>;
 }
 
@@ -134,8 +135,12 @@ where
 {
 }
 
-pub const fn sized_component_check<T, R>()
-where
-    T: HandleEvent + Render<R> + CalculateSize,
-{
+pub trait Stack: Sized {
+    fn stack<N>(self, next: N) -> (N, Self);
+}
+
+impl<T> Stack for T where T: Sized {
+    fn stack<N>(self, next: N) -> (N, Self) {
+        (next, self)
+    }
 }

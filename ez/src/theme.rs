@@ -6,6 +6,7 @@ use sdl2::surface::Surface;
 use sdl2::ttf::{Font, Sdl2TtfContext};
 
 pub struct Theme<'a> {
+    #[allow(unused)]
     font: Font<'a, 'static>,
 }
 

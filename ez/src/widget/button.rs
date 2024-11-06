@@ -1,12 +1,11 @@
 use amulet_core::component::{
     ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render,
-    RenderConstraints,
+    RenderConstraints, Stack,
 };
 use amulet_core::mouse::Button as MouseButton;
 use amulet_core::VuiResult;
 use amulet_sdl2::render::SdlRender;
 use sdl2::surface::Surface;
-use std::rc::Rc;
 
 pub struct Prerendered {
     surface: Surface<'static>,
@@ -44,34 +43,48 @@ where
 
 pub type Label = Prerendered;
 
-struct ButtonRender<C> {
+struct ButtonRender {
     unclicked: Prerendered,
     clicked: Prerendered,
-    inner: C,
 }
 
-impl<C> ButtonRender<C> {
-    pub fn new(unclicked: Surface<'static>, clicked: Surface<'static>, inner: C) -> Self {
+impl ButtonRender {
+    pub fn new(unclicked: Surface<'static>, clicked: Surface<'static>) -> Self {
         Self {
             unclicked: Prerendered::new(unclicked),
             clicked: Prerendered::new(clicked),
-            inner,
         }
     }
 }
 
-impl<C> HandleEvent for ButtonRender<C>
+pub struct EzTuple<T, U>(T, U);
+
+pub trait EzStack: Sized {
+    fn ez_stack<N>(self, next: N) -> EzTuple<N, Self>;
+}
+
+impl<T> EzStack for T
+where
+    T: Sized,
+{
+    fn ez_stack<N>(self, next: N) -> EzTuple<N, Self> {
+        EzTuple(next, self)
+    }
+}
+
+impl<C> HandleEvent for EzTuple<ButtonRender, C>
 where
     C: HandleEvent,
 {
     type State<'a> = C::State<'a>;
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        self.inner.handle_event(state, event)
+        let EzTuple(_, next) = &self;
+        next.handle_event(state, event)
     }
 }
 
-impl<C, R> Render<R> for ButtonRender<C>
+impl<C, R> Render<R> for EzTuple<ButtonRender, C>
 where
     C: Render<R>,
     R: SdlRender,
@@ -84,13 +97,14 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<()> {
+        let EzTuple(me, next) = &self;
         if ms_state.click_states().is_down(MouseButton::Left) {
-            self.clicked.render((), constraints.clone(), render_ctx)?;
+            me.clicked.render((), constraints.clone(), render_ctx)?;
         } else {
-            self.unclicked.render((), constraints.clone(), render_ctx)?;
+            me.unclicked.render((), constraints.clone(), render_ctx)?;
         }
 
-        self.inner.render(inner_state, constraints, render_ctx)
+        next.render(inner_state, constraints, render_ctx)
     }
 }
 
@@ -107,7 +121,9 @@ impl ButtonState {
 }
 
 pub struct Button {
-    component: Frame<MouseSensor<ButtonRender<Position<Label>>>>,
+    #[allow(clippy::type_complexity)]
+    #[rustfmt::skip]
+    component: (Frame, (MouseSensor, EzTuple<ButtonRender, (Position, Label)>), ),
 }
 
 impl Button {
@@ -116,14 +132,13 @@ impl Button {
         button_unclicked: Surface<'static>,
         label: Surface<'static>,
     ) -> Self {
-        let component = Frame::new(
-            button_clicked.size().into(),
-            MouseSensor::new(ButtonRender::new(
-                button_unclicked,
-                button_clicked,
-                Position::new((2, 2).into(), Label::new(label)),
-            )),
-        );
+        let frame_size = button_clicked.size().into();
+        let component = Label::new(label)
+            .stack(Position::new((2, 2).into()))
+            .ez_stack(ButtonRender::new(button_unclicked, button_clicked))
+            .stack(MouseSensor::new())
+            .stack(Frame::new(frame_size));
+
         Self { component }
     }
 }

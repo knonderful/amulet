@@ -3,29 +3,29 @@ use crate::geom::{Shrink, Size};
 use crate::VuiResult;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Frame<C> {
+pub struct Frame {
     size: Size,
-    inner: C,
 }
 
-impl<C> Frame<C> {
-    pub fn new(size: Size, inner: C) -> Self {
-        Self { size, inner }
+impl Frame {
+    pub fn new(size: Size) -> Self {
+        Self { size }
     }
 }
 
-impl<C> HandleEvent for Frame<C>
+impl<C> HandleEvent for (Frame, C)
 where
     C: HandleEvent,
 {
     type State<'a> = C::State<'a>;
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        self.inner.handle_event(state, event.shrink(self.size))
+        let (me, next) = self;
+        next.handle_event(state, event.shrink(me.size))
     }
 }
 
-impl<C, R> Render<R> for Frame<C>
+impl<C, R> Render<R> for (Frame, C)
 where
     C: Render<R>,
 {
@@ -37,14 +37,15 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<()> {
-        let Some(constraints) = constraints.shrink(self.size) else {
+        let (me, next) = self;
+        let Some(constraints) = constraints.shrink(me.size) else {
             return Ok(());
         };
-        self.inner.render(state, constraints, render_ctx)
+        next.render(state, constraints, render_ctx)
     }
 }
 
-impl<C> CalculateSize for Frame<C> {
+impl CalculateSize for Frame {
     fn calculate_size(&self) -> Size {
         self.size
     }
@@ -54,8 +55,8 @@ impl<C> CalculateSize for Frame<C> {
 mod test {
     use super::*;
     use crate::component::noop::Noop;
-    use crate::component::sized_component_check;
+    use crate::component::component_check;
 
     // Static check that we have all component traits implemented
-    const _: () = sized_component_check::<Frame<Noop>, ()>();
+    const _: () = component_check::<(Frame, Noop), ()>();
 }

@@ -1,4 +1,3 @@
-use crate::map_error;
 use amulet_core::component::RenderConstraints;
 use amulet_core::VuiResult;
 use sdl2::rect::Rect as SdlRect;
@@ -44,8 +43,7 @@ impl SdlRender for RenderContext<'_> {
     ) -> VuiResult<()> {
         let texture = self
             .texture_creator
-            .create_texture_from_surface(surface)
-            .map_err(map_error)?;
+            .create_texture_from_surface(surface)?;
         let (x, y) = {
             let rect = constraints.clip_rect();
             (rect.min.x, rect.min.y)

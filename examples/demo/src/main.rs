@@ -1,6 +1,6 @@
 use amulet_core::component::{
     CalculateSize, ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position,
-    Render, RenderConstraints,
+    Render, RenderConstraints, Stack,
 };
 use amulet_core::geom::{Rect, Size};
 use amulet_core::mouse::Button as MouseButton;
@@ -41,7 +41,10 @@ impl CalculateSize for Label<'_> {
     }
 }
 
-impl<R> Render<R> for Label<'_> where R: SdlRender {
+impl<R> Render<R> for Label<'_>
+where
+    R: SdlRender,
+{
     type State<'a> = ();
 
     fn render(
@@ -66,28 +69,32 @@ struct GuiState {
 
 struct Gui<'a> {
     font: Rc<Font<'a, 'static>>,
-    button: Position<Frame<MouseSensor<Label<'a>>>>,
-    clicked_label: Position<Label<'a>>,
+    button: (Position, (Frame, (MouseSensor, Label<'a>))),
+    clicked_label: (Position, Label<'a>),
     // ez_button: amulet_ez::widget::Button,
 }
 
 impl<'a> Gui<'a> {
-    fn create_clicked_label(font: Rc<Font<'a, 'static>>, click_count: u64) -> Position<Label<'a>> {
-        Position::new(
-            (10, 50).into(),
-            Label::new(
-                font.clone(),
-                format!("Count: {}", click_count).into(),
-            ))
+    fn create_clicked_label(
+        font: Rc<Font<'a, 'static>>,
+        click_count: u64,
+    ) -> (Position, Label<'a>) {
+        Label::new(font.clone(), format!("Count: {}", click_count).into())
+            .stack(Position::new((10, 50).into()))
     }
 
     fn new(app_state: &AppState, font: Rc<Font<'a, 'static>>) -> Self {
         let label = Label::new(font.clone(), "Button".into());
         let size = label.calculate_size();
 
+        let button = label
+            .stack(MouseSensor::new())
+            .stack(Frame::new(size))
+            .stack(Position::new((10, 10).into()));
+
         Self {
             font: font.clone(),
-            button: Position::new((10, 10).into(), Frame::new(size, MouseSensor::new(label))),
+            button,
             clicked_label: Self::create_clicked_label(font, app_state.click_count),
         }
     }
@@ -108,7 +115,10 @@ impl HandleEvent for Gui<'_> {
     }
 }
 
-impl<R> Render<R> for Gui<'_> where R: SdlRender {
+impl<R> Render<R> for Gui<'_>
+where
+    R: SdlRender,
+{
     type State<'a> = &'a GuiState;
 
     fn render(
@@ -117,11 +127,8 @@ impl<R> Render<R> for Gui<'_> where R: SdlRender {
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<()> {
-        self.button.render(
-            (&state.button_state, ()),
-            constraints.clone(),
-            render_ctx,
-        )?;
+        self.button
+            .render((&state.button_state, ()), constraints.clone(), render_ctx)?;
         self.clicked_label.render((), constraints, render_ctx)?;
         Ok(())
     }
