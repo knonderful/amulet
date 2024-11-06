@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
+use crate::component::{ComponentEvent, HandleEvent, PositionAttr, Render, RenderConstraints};
 use crate::geom::Point;
 use crate::VuiResult;
 
@@ -11,8 +11,10 @@ impl Position {
     pub fn new(pos: Point) -> Self {
         Self { value: pos }
     }
+}
 
-    pub fn position(&self) -> Point {
+impl PositionAttr for Position {
+    fn position(&self) -> Point {
         self.value
     }
 }

@@ -1,6 +1,9 @@
 use crate::widget::{Image, IntoStack};
 use crate::FramedTexture;
-use amulet_core::component::{ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render, RenderConstraints, SizeAttr};
+use amulet_core::component::{
+    ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render,
+    RenderConstraints, SizeAttr,
+};
 use amulet_core::geom::Size;
 use amulet_core::mouse::Button as MouseButton;
 use amulet_core::VuiResult;
