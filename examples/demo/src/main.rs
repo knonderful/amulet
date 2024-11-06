@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
 use amulet_core::component::mouse_aware::{MouseAware, MouseAwareState};
-use amulet_core::component::{ComponentEvent, HandleEvent, Pos, Render, Size, Text};
+use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, Size, Text};
 use amulet_core::mouse::MouseButton;
 use amulet_core::render::{RenderConstraints, RenderDestination};
 use amulet_core::VuiResult;
@@ -60,18 +60,18 @@ struct GuiState {
 }
 
 struct Gui<'a> {
-    button: Pos<MouseAware<Label<'a>>>,
-    clicked_label: Pos<Label<'a>>,
+    button: Position<MouseAware<Label<'a>>>,
+    clicked_label: Position<Label<'a>>,
 }
 
 impl<'a> Gui<'a> {
     fn new(app_state: &AppState, font: Rc<Font<'a, 'static>>) -> Self {
         Self {
-            button: Pos::new(
+            button: Position::new(
                 (10, 10).into(),
                 MouseAware::new(Label::new(font.clone(), "Button".into())),
             ),
-            clicked_label: Pos::new(
+            clicked_label: Position::new(
                 (10, 50).into(),
                 Label::new(
                     font.clone(),

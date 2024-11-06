@@ -62,20 +62,6 @@ where
     }
 }
 
-pub trait Position {
-    fn position(&self) -> Point;
-}
-
-impl<T> Position for T
-where
-    T: Deref,
-    <T as Deref>::Target: Position,
-{
-    fn position(&self) -> Point {
-        self.deref().position()
-    }
-}
-
 pub trait Render {
     type State<'a>;
 
@@ -102,18 +88,22 @@ where
     }
 }
 
-pub struct Pos<C> {
-    pos: Point,
+pub struct Position<C> {
+    value: Point,
     inner: C,
 }
 
-impl<C> Pos<C> {
+impl<C> Position<C> {
     pub fn new(pos: Point, inner: C) -> Self {
-        Self { pos, inner }
+        Self { value: pos, inner }
+    }
+
+    pub fn position(&self) -> Point {
+        self.value
     }
 }
 
-impl<C> Inner for Pos<C> {
+impl<C> Inner for Position<C> {
     type Component = C;
 
     fn inner(&self) -> &Self::Component {
@@ -121,7 +111,7 @@ impl<C> Inner for Pos<C> {
     }
 }
 
-impl<C> InnerMut for Pos<C> {
+impl<C> InnerMut for Position<C> {
     type Component = C;
 
     fn inner_mut(&mut self) -> &mut Self::Component {
@@ -129,7 +119,7 @@ impl<C> InnerMut for Pos<C> {
     }
 }
 
-impl<C> HandleEvent for Pos<C>
+impl<C> HandleEvent for Position<C>
 where
     C: HandleEvent,
 {
@@ -137,12 +127,12 @@ where
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
         let event = match event {
-            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos - self.pos),
+            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos - self.value),
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, pos - self.pos)
+                ComponentEvent::MouseButtonUp(btn, pos - self.value)
             }
             ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, pos - self.pos)
+                ComponentEvent::MouseButtonDown(btn, pos - self.value)
             }
             other => other,
         };
@@ -151,7 +141,7 @@ where
     }
 }
 
-impl<C> Size for Pos<C>
+impl<C> Size for Position<C>
 where
     C: Size,
 {
@@ -160,13 +150,7 @@ where
     }
 }
 
-impl<C> Position for Pos<C> {
-    fn position(&self) -> Point {
-        self.pos
-    }
-}
-
-impl<C> Render for Pos<C>
+impl<C> Render for Position<C>
 where
     C: Render,
 {
@@ -177,7 +161,7 @@ where
         state: Self::State<'_>,
         (dest, constraints): (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
-        let Some(constraints) = constraints.clip_topleft(self.pos) else {
+        let Some(constraints) = constraints.clip_topleft(self.value) else {
             return Ok(());
         };
         self.inner.render(state, (dest, constraints))
