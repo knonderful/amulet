@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
 use amulet_core::geom::{Rect, Size};
 use amulet_core::VuiResult;
@@ -20,6 +21,36 @@ struct MainFormState {
     btn_ok: ButtonState,
     btn_cancel: ButtonState,
     btn_defaults: ButtonState,
+}
+
+#[derive(Debug, Default)]
+struct ChangeDetector<T>(T, bool);
+
+impl<T> ChangeDetector<T> {
+    pub fn new(inner: T) -> Self {
+        Self(inner, false)
+    }
+
+    pub fn changed(&mut self) -> bool {
+        let out = self.1;
+        self.1 = false;
+        out
+    }
+}
+
+impl<T> Deref for ChangeDetector<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for ChangeDetector<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.1 = true;
+        &mut self.0
+    }
 }
 
 struct MainForm<'a> {
@@ -134,7 +165,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
-    let mut app_state = AppState::default();
+    let mut app_state = ChangeDetector::new(AppState::default());
     let mut main_form_state = MainFormState::default();
 
     let mut main_form = MainForm::new(&mut widget_factory, app_state.click_count)?;
@@ -177,7 +208,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         canvas.present();
 
-        main_form.update(app_state.click_count)?;
+        if app_state.changed() {
+            main_form.update(app_state.click_count)?;
+        }
     }
 
     Ok(())
