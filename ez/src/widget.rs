@@ -3,6 +3,7 @@ mod factory;
 
 use crate::FramedTexture;
 use amulet_core::component::{Frame, HandleEvent, Position, Render, RenderConstraints};
+use amulet_core::geom::Size;
 use amulet_core::VuiResult;
 use amulet_sdl2::render::SdlRender;
 pub use button::{Button, ButtonState};
@@ -36,8 +37,13 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
+        let rect = {
+            let size: Size = constraints.clip_rect().size().cast();
+            sdl2::rect::Rect::new(0, 0, size.width, size.height)
+        };
+
         let canvas = render_ctx.get_canvas(constraints.clone());
-        canvas.copy(&self.texture, None, None)?;
+        canvas.copy(&self.texture, rect, rect)?;
         Ok(constraints)
     }
 }

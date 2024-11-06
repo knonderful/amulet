@@ -64,9 +64,14 @@ impl ButtonState {
 }
 
 pub struct Button<'a> {
-    #[allow(clippy::type_complexity)]
-    #[rustfmt::skip]
-    component: (Frame, MouseSensor, ButtonRender<'a>, Position, Frame, Image<'a>),
+    component: (
+        Frame,
+        MouseSensor,
+        ButtonRender<'a>,
+        Position,
+        Frame,
+        Image<'a>,
+    ),
 }
 
 impl<'a> Button<'a> {

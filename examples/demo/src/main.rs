@@ -139,7 +139,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&mut canvas);
-        let constraints = RenderConstraints::new(window_rect);
+        let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (120, 50).into()));
         main_form.render(&main_form_state, constraints, &mut render_ctx)?;
 
         canvas.present();
