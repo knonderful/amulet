@@ -1,13 +1,12 @@
-use crate::generator::{Generator, GeneratorMut};
 use crate::math::Size as MathSize;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Point;
 use sdl2::surface::Surface;
 use sdl2::ttf::Font;
 use std::borrow::Cow;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 
 pub mod mouse_aware;
@@ -28,7 +27,7 @@ impl TryFrom<sdl2::mouse::MouseButton> for MouseButton {
             MB::Unknown | MB::X1 | MB::X2 => return Err(()),
             MB::Left => MouseButton::Left,
             MB::Middle => MouseButton::Middle,
-            MB::Right => MouseButton::Right
+            MB::Right => MouseButton::Right,
         };
         Ok(out)
     }
@@ -46,22 +45,27 @@ pub trait InnerMut {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ComponentEvent {
+    LoopStart,
     MouseMotion(Point),
     MouseButtonDown(MouseButton, Point),
     MouseButtonUp(MouseButton, Point),
 }
 
 pub trait HandleEvent {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()>;
+    type State<'a>;
+
+    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()>;
 }
 
 impl<T> HandleEvent for T
 where
-    T: DerefMut,
+    T: Deref,
     <T as Deref>::Target: HandleEvent,
 {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
-        self.deref_mut().handle_event(event)
+    type State<'a> = <<T as Deref>::Target as HandleEvent>::State<'a>;
+
+    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
+        self.deref().handle_event(state, event)
     }
 }
 
@@ -94,7 +98,13 @@ where
 }
 
 pub trait Render {
-    fn render(&self, target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()>;
+    type State<'a>;
+
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        target: (&mut RenderDestination, RenderConstraints),
+    ) -> VuiResult<()>;
 }
 
 impl<T> Render for T
@@ -102,8 +112,14 @@ where
     T: Deref,
     <T as Deref>::Target: Render,
 {
-    fn render(&self, target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
-        self.deref().render(target)
+    type State<'a> = <T::Target as Render>::State<'a>;
+
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        target: (&mut RenderDestination, RenderConstraints),
+    ) -> VuiResult<()> {
+        self.deref().render(state, target)
     }
 }
 
@@ -138,14 +154,21 @@ impl<C> HandleEvent for Pos<C>
 where
     C: HandleEvent,
 {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
+    type State<'a> = C::State<'a>;
+
+    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
         let event = match event {
             ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos - self.pos),
-            ComponentEvent::MouseButtonUp(btn, pos) => ComponentEvent::MouseButtonUp(btn, pos - self.pos),
-            ComponentEvent::MouseButtonDown(btn, pos) => ComponentEvent::MouseButtonDown(btn, pos - self.pos),
+            ComponentEvent::MouseButtonUp(btn, pos) => {
+                ComponentEvent::MouseButtonUp(btn, pos - self.pos)
+            }
+            ComponentEvent::MouseButtonDown(btn, pos) => {
+                ComponentEvent::MouseButtonDown(btn, pos - self.pos)
+            }
+            other => other,
         };
 
-        self.inner.handle_event(event)
+        self.inner.handle_event(state, event)
     }
 }
 
@@ -168,14 +191,17 @@ impl<C> Render for Pos<C>
 where
     C: Render,
 {
+    type State<'a> = C::State<'a>;
+
     fn render(
         &self,
+        state: Self::State<'_>,
         (dest, constraints): (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
         let Some(constraints) = constraints.clip_topleft(self.pos) else {
             return Ok(());
         };
-        self.inner.render((dest, constraints))
+        self.inner.render(state, (dest, constraints))
     }
 }
 
@@ -219,7 +245,9 @@ impl<R> HandleEvent for Text<R>
 where
     R: TextRenderer,
 {
-    fn handle_event(&mut self, _event: ComponentEvent) -> VuiResult<()> {
+    type State<'a> = ();
+
+    fn handle_event(&self, _state: Self::State<'_>, _event: ComponentEvent) -> VuiResult<()> {
         Ok(())
     }
 }
@@ -240,80 +268,14 @@ impl<R> Render for Text<R>
 where
     R: TextRenderer,
 {
-    fn render(&self, mut target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
-        let surface = self.renderer.render(&self.text)?;
-        target.blit_surface(&surface)
-    }
-}
+    type State<'a> = ();
 
-pub struct View<C> {
-    components: C,
-}
-
-impl<C> View<C> {
-    pub fn new(components: C) -> Self {
-        Self { components }
-    }
-}
-
-// We need this trait so that the calling code can use `dyn ViewElement`, since Rust doesn't allow `dyn Position + Render + Size + HandleEvent`.
-pub trait PositionalComponent: Position + Render + Size + HandleEvent {}
-impl<T> PositionalComponent for T where T: Position + Render + Size + HandleEvent {}
-
-impl<G> HandleEvent for View<G>
-where
-    G: GeneratorMut,
-    <G as GeneratorMut>::Item: HandleEvent,
-{
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
-        let mut gen_state = G::State::default();
-        while let Some(c) = self.components.next_mut(&mut gen_state) {
-            c.handle_event(event.clone())?;
-        }
-        Ok(())
-    }
-}
-
-impl<G> Size for View<G>
-where
-    G: Generator,
-    <G as Generator>::Item: Size + Position,
-{
-    fn size(&self) -> MathSize {
-        let (mut x_min, mut y_min, mut x_max, mut y_max) = (0, 0, 0, 0);
-        let mut gen_state = G::State::default();
-        while let Some(comp) = self.components.next(&mut gen_state) {
-            let pos = comp.position();
-            let size = comp.size();
-            let cur_rect = Rect::new(pos.x(), pos.y(), size.w, size.h);
-            x_min = i32::min(x_min, cur_rect.x());
-            y_min = i32::min(y_min, cur_rect.y());
-            x_max = i32::min(x_max, cur_rect.right());
-            y_max = i32::min(y_max, cur_rect.bottom());
-        }
-
-        let out = (
-            u32::try_from(x_max - x_min).expect("x_max < x_min"),
-            u32::try_from(y_max - y_min).expect("y_max < y_min"),
-        );
-
-        out.into()
-    }
-}
-
-impl<G> Render for View<G>
-where
-    G: Generator,
-    <G as Generator>::Item: Render,
-{
     fn render(
         &self,
-        (dest, constraints): (&mut RenderDestination, RenderConstraints),
+        _state: Self::State<'_>,
+        mut target: (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
-        let mut gen_state = G::State::default();
-        while let Some(comp) = self.components.next(&mut gen_state) {
-            comp.render((dest, constraints.clone()))?;
-        }
-        Ok(())
+        let surface = self.renderer.render(&self.text)?;
+        target.blit_surface(&surface)
     }
 }

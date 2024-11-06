@@ -23,9 +23,11 @@ impl<'ttf> Label<'ttf> {
     }
 }
 
-impl HandleEvent for Label<'_> {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
-        self.component.handle_event(event)
+impl<'ttf> HandleEvent for Label<'ttf> {
+    type State<'a> = ();
+
+    fn handle_event(&self, _state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
+        self.component.handle_event((), event)
     }
 }
 
@@ -36,8 +38,14 @@ impl Size for Label<'_> {
 }
 
 impl Render for Label<'_> {
-    fn render(&self, target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
-        self.component.render(target)
+    type State<'a> = ();
+
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        target: (&mut RenderDestination, RenderConstraints),
+    ) -> VuiResult<()> {
+        self.component.render(state, target)
     }
 }
 
@@ -52,23 +60,16 @@ struct GuiState {
 }
 
 struct Gui<'a> {
-    button: Pos<MouseAware<&'a mut MouseAwareState, Label<'a>>>,
+    button: Pos<MouseAware<Label<'a>>>,
     clicked_label: Pos<Label<'a>>,
 }
 
 impl<'a> Gui<'a> {
-    fn new<'b>(
-        app_state: &AppState,
-        gui_state: &'a mut GuiState,
-        font: Rc<Font<'a, 'static>>,
-    ) -> Self {
+    fn new(app_state: &AppState, font: Rc<Font<'a, 'static>>) -> Self {
         Self {
             button: Pos::new(
                 (10, 10).into(),
-                MouseAware::new(
-                    &mut gui_state.button_state,
-                    Label::new(font.clone(), "Button".into()),
-                ),
+                MouseAware::new(Label::new(font.clone(), "Button".into())),
             ),
             clicked_label: Pos::new(
                 (10, 50).into(),
@@ -82,25 +83,27 @@ impl<'a> Gui<'a> {
 }
 
 impl HandleEvent for Gui<'_> {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
-        for comp in [
-            &mut self.button,
-            &mut self.clicked_label as &mut dyn HandleEvent,
-        ] {
-            comp.handle_event(event.clone())?
-        }
+    type State<'a> = &'a mut GuiState;
+
+    fn handle_event(&self, gui_state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
+        self.button
+            .handle_event((&mut gui_state.button_state, ()), event.clone())?;
+        self.clicked_label.handle_event((), event.clone())?;
         Ok(())
     }
 }
 
 impl Render for Gui<'_> {
+    type State<'a> = &'a GuiState;
+
     fn render(
         &self,
+        gui_state: Self::State<'_>,
         (dest, constriants): (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
-        for comp in [&self.button, &self.clicked_label as &dyn Render] {
-            comp.render((dest, constriants.clone()))?
-        }
+        self.button
+            .render((&gui_state.button_state, ()), (dest, constriants.clone()))?;
+        self.clicked_label.render((), (dest, constriants.clone()))?;
         Ok(())
     }
 }
@@ -131,8 +134,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut gui_state = GuiState::default();
 
     'running: loop {
-        let mut gui = Gui::new(&app_state, &mut gui_state, font.clone());
-        // let mut view = View::new(&mut gui);
+        let gui = Gui::new(&app_state, font.clone());
+
+        gui.handle_event(&mut gui_state, ComponentEvent::LoopStart)?;
 
         for event in event_pump.poll_iter() {
             match event {
@@ -142,7 +146,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ..
                 } => break 'running,
                 Event::MouseMotion { x, y, .. } => {
-                    gui.handle_event(ComponentEvent::MouseMotion((x, y).into()))?;
+                    gui.handle_event(&mut gui_state, ComponentEvent::MouseMotion((x, y).into()))?;
                 }
                 Event::MouseButtonUp {
                     x, y, mouse_btn, ..
@@ -150,7 +154,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let Ok(btn) = mouse_btn.try_into() else {
                         continue;
                     };
-                    gui.handle_event(ComponentEvent::MouseButtonUp(btn, (x, y).into()))?;
+                    gui.handle_event(
+                        &mut gui_state,
+                        ComponentEvent::MouseButtonUp(btn, (x, y).into()),
+                    )?;
                 }
                 Event::MouseButtonDown {
                     x, y, mouse_btn, ..
@@ -158,17 +165,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let Ok(btn) = mouse_btn.try_into() else {
                         continue;
                     };
-                    gui.handle_event(ComponentEvent::MouseButtonDown(btn, (x, y).into()))?;
+                    gui.handle_event(
+                        &mut gui_state,
+                        ComponentEvent::MouseButtonDown(btn, (x, y).into()),
+                    )?;
                 }
                 _ => {}
             }
         }
-        // NB: Currently we have the gui_state and the app_state tied to the gui, which means we can't use them unless
-        //     we drop the gui first. This means we have to rebuild the gui for the render (or pay the price of always
-        //     having a state-lag of 1 frame. =(
-        //     The solution would be to NOT tie the gui state to the gui, which means somehow passing the state through
-        //     handle_event(), which means each type needs to specify its state (cascadingly).
-        drop(gui);
 
         if gui_state.button_state.click_completed(MouseButton::Left) {
             app_state.click_count += 1;
@@ -179,8 +183,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut render_dest = RenderDestination::new(&texture_creator, &mut canvas);
         let constraints = RenderConstraints::new(Rect::new(0, 0, 800, 600));
-        let gui = Gui::new(&app_state, &mut gui_state, font.clone());
-        gui.render((&mut render_dest, constraints.clone()))?;
+        gui.render(&gui_state, (&mut render_dest, constraints.clone()))?;
 
         canvas.present();
     }

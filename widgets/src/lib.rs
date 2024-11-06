@@ -16,13 +16,14 @@ pub struct Label<R> {
 
 impl<R> Label<R> {
     pub fn new(text: Text<R>) -> Self {
-        Self {
-            component: text,
-        }
+        Self { component: text }
     }
 }
 
-impl<R> AsComponent for Label<R> where R: TextRenderer {
+impl<R> AsComponent for Label<R>
+where
+    R: TextRenderer,
+{
     type Component = Text<R>;
 
     fn as_component(&self) -> &Self::Component {
@@ -30,7 +31,10 @@ impl<R> AsComponent for Label<R> where R: TextRenderer {
     }
 }
 
-impl<R> AsComponentMut for Label<R> where R: TextRenderer {
+impl<R> AsComponentMut for Label<R>
+where
+    R: TextRenderer,
+{
     type Component = Text<R>;
 
     fn as_component_mut(&mut self) -> &mut Self::Component {

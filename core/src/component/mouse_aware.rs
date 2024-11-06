@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, MouseButton, Render, Size};
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
@@ -74,31 +73,16 @@ impl MouseAwareState {
     }
 }
 
-pub struct MouseAware<S, C> {
-    state: S,
+pub struct MouseAware<C> {
     inner: C,
 }
 
-impl<S, C> MouseAware<S, C> where S: DerefMut<Target=MouseAwareState> {
-    pub fn new(mut ctx: S, inner: C) -> Self {
-        // Advance click states, such that we don't get "stuck" in intermediate states
-        for btn in MouseButton::iter() {
-            match ctx.mouse_state.click_states.get(btn) {
-                ClickState::Neutral => {}
-                ClickState::Started => ctx.mouse_state.click_states.set(btn, ClickState::Active),
-                ClickState::Active => {}
-                ClickState::Completed => ctx.mouse_state.click_states.set(btn, ClickState::Neutral),
-            }
-        }
-
-        Self { inner, state: ctx }
-    }
-
-    pub fn state(&self) -> &MouseAwareState {
-        &self.state
+impl<C> MouseAware<C> {
+    pub fn new(inner: C) -> Self {
+        Self { inner }
     }
 }
-impl<S, C> MouseAware<S, C>
+impl<C> MouseAware<C>
 where
     C: Size,
 {
@@ -109,7 +93,7 @@ where
     }
 }
 
-impl<S, C> Size for MouseAware<S, C>
+impl<C> Size for MouseAware<C>
 where
     C: Size,
 {
@@ -118,20 +102,38 @@ where
     }
 }
 
-impl<S, C> HandleEvent for MouseAware<S, C>
+impl<C> HandleEvent for MouseAware<C>
 where
     C: HandleEvent + Size,
-    S: DerefMut<Target=MouseAwareState>
 {
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
+    type State<'a> = (&'a mut MouseAwareState, C::State<'a>);
+
+    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
+        let (state, inner_state) = state;
+
         match event {
+            ComponentEvent::LoopStart => {
+                // Advance click states, such that we don't get "stuck" in intermediate states
+                for btn in MouseButton::iter() {
+                    match state.mouse_state.click_states.get(btn) {
+                        ClickState::Neutral => {}
+                        ClickState::Started => {
+                            state.mouse_state.click_states.set(btn, ClickState::Active)
+                        }
+                        ClickState::Active => {}
+                        ClickState::Completed => {
+                            state.mouse_state.click_states.set(btn, ClickState::Neutral)
+                        }
+                    }
+                }
+            }
             ComponentEvent::MouseMotion(pos) => {
                 let new_state = if self.is_inside(pos) {
                     HoverState::Inside
                 } else {
                     HoverState::Outside
                 };
-                self.state.mouse_state.hover_state = new_state;
+                state.mouse_state.hover_state = new_state;
             }
             ComponentEvent::MouseButtonDown(btn, pos) => {
                 let new_state = if self.is_inside(pos) {
@@ -139,10 +141,10 @@ where
                 } else {
                     ClickState::Neutral
                 };
-                self.state.mouse_state.click_states.set(btn, new_state);
+                state.mouse_state.click_states.set(btn, new_state);
             }
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                let new_state = match self.state.mouse_state.click_states.get(btn) {
+                let new_state = match state.mouse_state.click_states.get(btn) {
                     ClickState::Started | ClickState::Active => {
                         if self.is_inside(pos) {
                             ClickState::Completed
@@ -152,20 +154,27 @@ where
                     }
                     ClickState::Neutral | ClickState::Completed => ClickState::Neutral,
                 };
-                self.state.mouse_state.click_states.set(btn, new_state);
+                state.mouse_state.click_states.set(btn, new_state);
             }
         }
-        self.inner.handle_event(event)
+
+        self.inner.handle_event(inner_state, event)
     }
 }
 
-impl<S, C> Render for MouseAware<S, C>
+impl<C> Render for MouseAware<C>
 where
     C: Render + Size,
-    S: Deref<Target=MouseAwareState>,
 {
-    fn render(&self, mut target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
-        if self.state.mouse_state.hover_state == HoverState::Inside {
+    type State<'a> = (&'a MouseAwareState, C::State<'a>);
+
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        mut target: (&mut RenderDestination, RenderConstraints),
+    ) -> VuiResult<()> {
+        let (state, inner_state) = state;
+        if state.mouse_state.hover_state == HoverState::Inside {
             let size = self.size();
             let surf = Surface::new(size.w, size.h, PixelFormatEnum::ARGB8888)?;
             let mut canvas = surf.into_canvas()?;
@@ -175,12 +184,11 @@ where
             target.blit_surface(&surf)?;
         }
 
-        self.inner.render(target)
+        self.inner.render(inner_state, target)
     }
 }
 
-
-impl<S, C> Inner for MouseAware<S, C> {
+impl<C> Inner for MouseAware<C> {
     type Component = C;
 
     fn inner(&self) -> &Self::Component {
@@ -188,7 +196,7 @@ impl<S, C> Inner for MouseAware<S, C> {
     }
 }
 
-impl<S, C> InnerMut for MouseAware<S, C> {
+impl<C> InnerMut for MouseAware<C> {
     type Component = C;
 
     fn inner_mut(&mut self) -> &mut Self::Component {
