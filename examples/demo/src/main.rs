@@ -1,5 +1,6 @@
-use amulet_core::component::mouse_aware::{MouseSensor, MouseSensorState};
-use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, Size, Text};
+use amulet_core::component::{
+    ComponentEvent, HandleEvent, MouseSensor, MouseSensorState, Position, Render, Size, Text,
+};
 use amulet_core::geom::{ComponentSize, Rect};
 use amulet_core::mouse::Button;
 use amulet_core::render::{RenderConstraints, RenderDestination};

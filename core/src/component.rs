@@ -9,7 +9,19 @@ use std::borrow::Cow;
 use std::ops::Deref;
 use std::rc::Rc;
 
-pub mod mouse_aware;
+mod mouse_sensor;
+mod position;
+
+pub use mouse_sensor::{MouseSensor, MouseSensorState};
+pub use position::Position;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ComponentEvent {
+    LoopStart,
+    MouseMotion(Point),
+    MouseButtonDown(Button, Point),
+    MouseButtonUp(Button, Point),
+}
 
 pub trait Inner {
     type Component;
@@ -19,14 +31,6 @@ pub trait Inner {
 pub trait InnerMut {
     type Component;
     fn inner_mut(&mut self) -> &mut Self::Component;
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ComponentEvent {
-    LoopStart,
-    MouseMotion(Point),
-    MouseButtonDown(Button, Point),
-    MouseButtonUp(Button, Point),
 }
 
 pub trait HandleEvent {
@@ -84,88 +88,6 @@ where
         target: (&mut RenderDestination, RenderConstraints),
     ) -> VuiResult<()> {
         self.deref().render(state, target)
-    }
-}
-
-pub struct Position<C> {
-    value: Point,
-    inner: C,
-}
-
-impl<C> Position<C> {
-    pub fn new(pos: Point, inner: C) -> Self {
-        Self { value: pos, inner }
-    }
-
-    pub fn position(&self) -> Point {
-        self.value
-    }
-}
-
-impl<C> Inner for Position<C> {
-    type Component = C;
-
-    fn inner(&self) -> &Self::Component {
-        &self.inner
-    }
-}
-
-impl<C> InnerMut for Position<C> {
-    type Component = C;
-
-    fn inner_mut(&mut self) -> &mut Self::Component {
-        &mut self.inner
-    }
-}
-
-impl<C> HandleEvent for Position<C>
-where
-    C: HandleEvent,
-{
-    type State<'a> = C::State<'a>;
-
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let event = match event {
-            ComponentEvent::MouseMotion(pos) => {
-                ComponentEvent::MouseMotion((pos - self.value).to_point())
-            }
-            ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, (pos - self.value).to_point())
-            }
-            ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, (pos - self.value).to_point())
-            }
-            other => other,
-        };
-
-        self.inner.handle_event(state, event)
-    }
-}
-
-impl<C> Size for Position<C>
-where
-    C: Size,
-{
-    fn size(&self) -> ComponentSize {
-        self.inner.size()
-    }
-}
-
-impl<C> Render for Position<C>
-where
-    C: Render,
-{
-    type State<'a> = C::State<'a>;
-
-    fn render(
-        &self,
-        state: Self::State<'_>,
-        (dest, constraints): (&mut RenderDestination, RenderConstraints),
-    ) -> VuiResult<()> {
-        let Some(constraints) = constraints.clip_topleft(self.value.to_vector()) else {
-            return Ok(());
-        };
-        self.inner.render(state, (dest, constraints))
     }
 }
 
