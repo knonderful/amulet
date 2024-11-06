@@ -35,8 +35,8 @@ impl<C> InnerMut for Position<C> {
 }
 
 impl<C> HandleEvent for Position<C>
-    where
-        C: HandleEvent,
+where
+    C: HandleEvent,
 {
     type State<'a> = C::State<'a>;
 
@@ -59,8 +59,8 @@ impl<C> HandleEvent for Position<C>
 }
 
 impl<C> Size for Position<C>
-    where
-        C: Size,
+where
+    C: Size,
 {
     fn size(&self) -> ComponentSize {
         self.inner.size()
@@ -68,8 +68,8 @@ impl<C> Size for Position<C>
 }
 
 impl<C> Render for Position<C>
-    where
-        C: Render,
+where
+    C: Render,
 {
     type State<'a> = C::State<'a>;
 

@@ -5,7 +5,8 @@ use amulet_core::geom::{ComponentSize, Rect};
 use amulet_core::mouse::Button;
 use amulet_core::render::{RenderConstraints, RenderDestination};
 use amulet_core::VuiResult;
-use sdl2::event::Event;
+use amulet_sdl2::{event_iterator, Event};
+use sdl2::event::Event as SdlEvent;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::ttf::Font;
@@ -136,41 +137,19 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     'running: loop {
         let gui = Gui::new(&app_state, font.clone());
 
-        gui.handle_event(&mut gui_state, ComponentEvent::LoopStart)?;
-
-        for event in event_pump.poll_iter() {
+        for event in event_iterator(&mut event_pump) {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                Event::MouseMotion { x, y, .. } => {
-                    gui.handle_event(&mut gui_state, ComponentEvent::MouseMotion((x, y).into()))?;
+                Event::Amulet(evt) => {
+                    gui.handle_event(&mut gui_state, evt)?;
                 }
-                Event::MouseButtonUp {
-                    x, y, mouse_btn, ..
-                } => {
-                    let Ok(btn) = mouse_btn.try_into() else {
-                        continue;
-                    };
-                    gui.handle_event(
-                        &mut gui_state,
-                        ComponentEvent::MouseButtonUp(btn, (x, y).into()),
-                    )?;
-                }
-                Event::MouseButtonDown {
-                    x, y, mouse_btn, ..
-                } => {
-                    let Ok(btn) = mouse_btn.try_into() else {
-                        continue;
-                    };
-                    gui.handle_event(
-                        &mut gui_state,
-                        ComponentEvent::MouseButtonDown(btn, (x, y).into()),
-                    )?;
-                }
-                _ => {}
+                Event::Sdl(evt) => match evt {
+                    SdlEvent::Quit { .. }
+                    | SdlEvent::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => break 'running,
+                    _ => {}
+                },
             }
         }
 

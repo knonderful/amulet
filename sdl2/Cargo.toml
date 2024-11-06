@@ -1,9 +1,8 @@
 [package]
-name = "amulet-demo"
+name = "amulet-sdl2"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-amulet-core = { path = "../../core" }
-amulet-sdl2 = { path = "../../sdl2" }
+amulet-core = {path = "../core" }
 sdl2 = { version = "0.36", features = ["ttf", "gfx"] }
