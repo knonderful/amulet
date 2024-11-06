@@ -1,7 +1,7 @@
 use crate::widget::Image;
 use amulet_core::component::{
-    AdjustLayout, AsChain, ComponentEvent, Frame, HandleEvent, Layout, MouseSensor,
-    MouseSensorState, Position, SizeAttr,
+    AsChain, ComponentEvent, Frame, HandleEvent, Layout, MouseSensor, MouseSensorState, Position,
+    SizeAttr, UpdateLayout,
 };
 use amulet_core::geom::Size;
 use amulet_core::mouse::MouseButton;
@@ -73,9 +73,9 @@ impl Render for Button<'_> {
         layout: Layout,
         render_context: &mut RenderContext,
     ) -> VuiResult<()> {
-        let layout = self.outer.as_chain().adjust_layout(((), ()), layout)?;
+        let layout = self.outer.as_chain().update_layout(((), ()), layout)?;
         self.background.render((), layout.clone(), render_context)?;
-        let layout = self.inner.as_chain().adjust_layout(((), (), ()), layout)?;
+        let layout = self.inner.as_chain().update_layout(((), (), ()), layout)?;
         self.content.render((), layout, render_context)
     }
 }

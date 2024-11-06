@@ -108,10 +108,10 @@ where
     }
 }
 
-pub trait AdjustLayout {
+pub trait UpdateLayout {
     type State<'a>;
 
-    fn adjust_layout(
+    fn update_layout(
         &self,
         #[allow(unused)] state: Self::State<'_>,
         layout: Layout,
@@ -120,14 +120,14 @@ pub trait AdjustLayout {
     }
 }
 
-impl<T> AdjustLayout for &T
+impl<T> UpdateLayout for &T
 where
-    T: AdjustLayout,
+    T: UpdateLayout,
 {
     type State<'a> = T::State<'a>;
 
-    fn adjust_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
-        (*self).adjust_layout(state, layout)
+    fn update_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+        (*self).update_layout(state, layout)
     }
 }
 
@@ -192,17 +192,17 @@ macro_rules! impl_tuple_component {
             }
         }
 
-        impl<$t0, $($tx,)*> AdjustLayout for ComponentChain<&($t0, $($tx,)*)> where $t0 : AdjustLayout, $($tx : AdjustLayout,)* {
+        impl<$t0, $($tx,)*> UpdateLayout for ComponentChain<&($t0, $($tx,)*)> where $t0 : UpdateLayout, $($tx : UpdateLayout,)* {
             type State<'a> = ($t0::State<'a>, $($tx::State<'a>,)*);
 
-            fn adjust_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+            fn update_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
                 paste!{
                     let ([<$t0:lower>], $([<$tx:lower>],)*) = &self.components;
                     let ([<$t0:lower _state>], $([<$tx:lower _state>],)*) = state;
 
-                    let layout = [<$t0:lower>].adjust_layout([<$t0:lower _state>], layout)?;
+                    let layout = [<$t0:lower>].update_layout([<$t0:lower _state>], layout)?;
                     $(
-                    let layout = [<$tx:lower>].adjust_layout([<$tx:lower _state>], layout)?;
+                    let layout = [<$tx:lower>].update_layout([<$tx:lower _state>], layout)?;
                     )*
                 }
                 Ok(layout)
@@ -235,7 +235,7 @@ pub trait PositionAttr {
 #[cfg(test)]
 mod test {
     use crate::component::{
-        AdjustLayout, AsChain, ComponentEvent, Frame, FramedPosition, HandleEvent, Layout, Position,
+        AsChain, ComponentEvent, Frame, FramedPosition, HandleEvent, Layout, Position, UpdateLayout,
     };
     use crate::geom::{Point, Rect};
 
@@ -266,7 +266,7 @@ mod test {
         );
         let state = ((), ());
         let layout = Layout::new(Rect::from_xywh(600, 700, 200, 180));
-        let layout = comps.as_chain().adjust_layout(state, layout).unwrap();
+        let layout = comps.as_chain().update_layout(state, layout).unwrap();
         let expected_layout = Layout::new(Rect::from_xywh(612, 734, 100, 146));
 
         assert_eq!(expected_layout, layout);

@@ -1,4 +1,4 @@
-use crate::component::{AdjustLayout, ComponentEvent, HandleEvent, Layout, SizeAttr};
+use crate::component::{ComponentEvent, HandleEvent, Layout, SizeAttr, UpdateLayout};
 use crate::geom::Size;
 use crate::VuiResult;
 
@@ -31,10 +31,10 @@ impl HandleEvent for Frame {
     }
 }
 
-impl AdjustLayout for Frame {
+impl UpdateLayout for Frame {
     type State<'a> = ();
 
-    fn adjust_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+    fn update_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
         Ok(layout.resize_clipped(self.size))
     }
 }

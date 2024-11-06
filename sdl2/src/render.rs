@@ -1,5 +1,5 @@
 use crate::lossy::LossyInto;
-use amulet_core::component::{AdjustLayout, Layout};
+use amulet_core::component::{Layout, UpdateLayout};
 use amulet_core::VuiResult;
 use sdl2::render::{Canvas, WindowCanvas};
 use sdl2::video::Window;
@@ -17,7 +17,7 @@ pub trait Render {
 
 impl<A, Z> Render for (A, Z)
 where
-    A: AdjustLayout,
+    A: UpdateLayout,
     Z: Render,
 {
     type State<'a> = (A::State<'a>, Z::State<'a>);
@@ -30,7 +30,7 @@ where
     ) -> VuiResult<()> {
         let (a, z) = self;
         let (a_state, z_state) = state;
-        let layout = a.adjust_layout(a_state, layout)?;
+        let layout = a.update_layout(a_state, layout)?;
         z.render(z_state, layout, render_context)
     }
 }

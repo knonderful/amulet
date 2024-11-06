@@ -1,6 +1,6 @@
 use amulet_core::component::{
-    AdjustLayout, AsChain, ComponentEvent, Frame, HandleEvent, Layout, Position, PositionAttr,
-    SizeAttr,
+    AsChain, ComponentEvent, Frame, HandleEvent, Layout, Position, PositionAttr, SizeAttr,
+    UpdateLayout,
 };
 use amulet_core::geom::{Point, Rect, Size};
 use amulet_core::VuiResult;
@@ -136,7 +136,7 @@ impl Render for MainForm<'_> {
     ) -> VuiResult<()> {
         self.button
             .render(((), &gui_state.button), layout.clone(), render_ctx)?;
-        let layout = self.anchor.adjust_layout((), layout)?;
+        let layout = self.anchor.update_layout((), layout)?;
         self.btn_ok
             .render(((), &gui_state.btn_ok), layout.clone(), render_ctx)?;
         self.btn_defaults

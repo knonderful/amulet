@@ -1,4 +1,4 @@
-use crate::component::{AdjustLayout, ComponentEvent, HandleEvent, Layout, PositionAttr};
+use crate::component::{ComponentEvent, HandleEvent, Layout, PositionAttr, UpdateLayout};
 use crate::geom::Point;
 use crate::VuiResult;
 
@@ -31,10 +31,10 @@ impl HandleEvent for Position {
     }
 }
 
-impl AdjustLayout for Position {
+impl UpdateLayout for Position {
     type State<'a> = ();
 
-    fn adjust_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+    fn update_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
         Ok(layout.clip(self.value.as_vector()))
     }
 }
