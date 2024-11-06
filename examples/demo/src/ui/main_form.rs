@@ -5,7 +5,7 @@ use amulet_core::component::{
 use amulet_core::geom::{Point, Rect, Size};
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
-use amulet_ez::widget::{Button, ButtonState};
+use amulet_ez::widget::{Button, ButtonState, DynText, TextInput, TextInputState};
 use amulet_sdl2::render::{Render, RenderContext};
 
 #[derive(Debug, Default)]
@@ -14,16 +14,18 @@ pub struct MainFormState {
     pub btn_ok: ButtonState,
     pub btn_defaults: ButtonState,
     pub btn_cancel: ButtonState,
+    pub text_input: TextInputState,
 }
 
 pub struct MainForm<'a> {
-    widget_factory: &'a Theme<'a>,
+    theme: &'a Theme<'a>,
     button: (Position, Button<'a>),
     /// Anchor position for `btn_*` components.
     anchor: Position,
     btn_ok: (Position, Button<'a>),
     btn_defaults: (Position, Button<'a>),
     btn_cancel: (Position, Button<'a>),
+    text_input: TextInput<'a>,
 }
 
 trait AlignCenter {
@@ -66,14 +68,21 @@ impl<'a> MainForm<'a> {
             theme.button(lbl_cancel.align_center(max))?,
         );
         let anchor = Self::calc_anchor(rect, &btn_cancel);
+        let text_input_content = (
+            Frame::new((100, 32).into()),
+            Position::new(Point::zero()),
+            DynText::new(theme),
+        );
+        let text_input = theme.text_input(text_input_content)?;
 
         Ok(Self {
-            widget_factory: theme,
+            theme,
             button,
             anchor,
             btn_ok,
             btn_defaults,
             btn_cancel,
+            text_input,
         })
     }
 
@@ -93,7 +102,7 @@ impl<'a> MainForm<'a> {
     }
 
     pub fn update_click_count(&mut self, click_count: u64) -> VuiResult<()> {
-        self.button = Self::create_button(self.widget_factory, click_count)?;
+        self.button = Self::create_button(self.theme, click_count)?;
         Ok(())
     }
 }
@@ -109,16 +118,22 @@ impl HandleEvent for MainForm<'_> {
         self.button
             .as_chain()
             .handle_event(((), &mut gui_state.button), event.clone())?;
-        let event = self.anchor.handle_event((), event)?;
-        self.btn_ok
-            .as_chain()
-            .handle_event(((), &mut gui_state.btn_ok), event.clone())?;
-        self.btn_defaults
-            .as_chain()
-            .handle_event(((), &mut gui_state.btn_defaults), event.clone())?;
-        self.btn_cancel
-            .as_chain()
-            .handle_event(((), &mut gui_state.btn_cancel), event.clone())?;
+
+        {
+            let event = self.anchor.handle_event((), event.clone())?;
+            self.btn_ok
+                .as_chain()
+                .handle_event(((), &mut gui_state.btn_ok), event.clone())?;
+            self.btn_defaults
+                .as_chain()
+                .handle_event(((), &mut gui_state.btn_defaults), event.clone())?;
+            self.btn_cancel
+                .as_chain()
+                .handle_event(((), &mut gui_state.btn_cancel), event.clone())?;
+        }
+
+        self.text_input
+            .handle_event(&mut gui_state.text_input, event.clone())?;
 
         // Kind of nonsensical =)
         Ok(event)
@@ -136,13 +151,18 @@ impl Render for MainForm<'_> {
     ) -> VuiResult<()> {
         self.button
             .render(((), &gui_state.button), layout.clone(), render_ctx)?;
-        let layout = self.anchor.update_layout((), layout)?;
-        self.btn_ok
-            .render(((), &gui_state.btn_ok), layout.clone(), render_ctx)?;
-        self.btn_defaults
-            .render(((), &gui_state.btn_defaults), layout.clone(), render_ctx)?;
-        self.btn_cancel
-            .render(((), &gui_state.btn_cancel), layout.clone(), render_ctx)?;
+        {
+            let layout = self.anchor.update_layout((), layout.clone())?;
+            self.btn_ok
+                .render(((), &gui_state.btn_ok), layout.clone(), render_ctx)?;
+            self.btn_defaults
+                .render(((), &gui_state.btn_defaults), layout.clone(), render_ctx)?;
+            self.btn_cancel
+                .render(((), &gui_state.btn_cancel), layout.clone(), render_ctx)?;
+        }
+
+        self.text_input
+            .render(&gui_state.text_input, layout, render_ctx)?;
 
         Ok(())
     }

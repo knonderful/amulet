@@ -66,12 +66,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ttf_context = sdl2::ttf::init()?;
     let texture_creator = canvas.texture_creator();
-    let theme = Theme::create(&ttf_context, texture_creator)?;
+    let theme = Theme::create(&ttf_context, &texture_creator)?;
 
     let mut event_pump = sdl_context.event_pump()?;
 
     let mut app_state = ChangeDetector::new(AppState::default());
     let mut main_form_state = MainFormState::default();
+    // main_form_state.dyn_text.push_str("Hello: ");
 
     let mut main_form = MainForm::new(&theme, *window_rect, app_state.click_count)?;
 
@@ -96,6 +97,16 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         WindowEvent::Resized(x, y) => {
                             *window_rect = window_rect.resize((x, y).into());
+                        }
+                        _ => {}
+                    },
+                    SdlEvent::TextInput {text, ..} => {
+                        main_form_state.text_input.update(&text);
+                    }
+                    SdlEvent::KeyDown { keycode, ..} => match keycode {
+                        Some(Keycode::Backspace) => {
+                            // let new_len = main_form_state.dyn_text.len() - 1;
+                            // main_form_state.dyn_text.truncate(new_len);
                         }
                         _ => {}
                     },
