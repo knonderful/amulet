@@ -67,8 +67,8 @@ where
             sdl2::rect::Point::new(x, y - 1),
         )?;
         self.draw_line(
-            sdl2::rect::Point::new(1, y - 1),
-            sdl2::rect::Point::new(x - 1, y - 1),
+            sdl2::rect::Point::new(1, y),
+            sdl2::rect::Point::new(x - 1, y),
         )?;
         self.draw_line(
             sdl2::rect::Point::new(0, 1),
