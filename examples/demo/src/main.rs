@@ -5,7 +5,7 @@ use amulet_ez::theme::Theme;
 use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
 use amulet_sdl2::render::{RenderContext, SdlRender};
 use amulet_sdl2::{event_iterator, Event};
-use sdl2::event::Event as SdlEvent;
+use sdl2::event::{Event as SdlEvent, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
@@ -92,7 +92,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .resizable()
         .build()?;
 
-    let window_rect = {
+    let mut window_rect = {
         let (w, h) = window.size();
         Rect::from_size(Size::new(w, h).cast())
     };
@@ -126,6 +126,11 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                         keycode: Some(Keycode::Escape),
                         ..
                     } => break 'running,
+                    SdlEvent::Window { win_event, .. } => match win_event {
+                        WindowEvent::SizeChanged(x, y) => window_rect.set_size((x, y).into()),
+                        WindowEvent::Resized(x, y) => window_rect.set_size((x, y).into()),
+                        _ => {}
+                    },
                     _ => {}
                 },
             }
@@ -139,7 +144,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&mut canvas);
-        let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (120, 50).into()));
+        let constraints = RenderConstraints::new(window_rect);
         main_form.render(&main_form_state, constraints, &mut render_ctx)?;
 
         canvas.present();
