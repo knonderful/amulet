@@ -83,6 +83,10 @@ impl Theme<'_> {
         Ok(self.font.render(text).blended(PRIMARY_FG)?)
     }
 
+    pub fn label_size(&self, text: &str) -> VuiResult<Size> {
+        Ok(self.font.size_of(text)?.into())
+    }
+
     pub fn button(&self, size: Size) -> VuiResult<Surface<'static>> {
         let surface = Surface::new(size.width, size.height, PixelFormatEnum::RGB888)?;
         let mut canvas = surface.into_canvas()?;
