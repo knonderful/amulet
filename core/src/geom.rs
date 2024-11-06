@@ -1,4 +1,3 @@
-use crate::math::LossyInto;
 use euclid::{Box2D, Point2D, Size2D, Vector2D};
 
 pub struct AmuSpace;
@@ -25,14 +24,6 @@ pub trait Shrink: Sized {
 
 impl Shrink for Rect {
     fn shrink(&self, size: Size) -> Self {
-        let old_size = self.size();
-        // let old_size = (old_size.width, old_size.height);
-        let (new_w, new_h): (i32, i32) = (size.width.lossy_into(), size.height.lossy_into());
-        let size = (
-            i32::min(old_size.width, new_w),
-            i32::min(old_size.height, new_h),
-        );
-
-        Self::from_origin_and_size(self.min, size.into())
+        Self::from_origin_and_size(self.min, self.size().min(size.to_i32()))
     }
 }

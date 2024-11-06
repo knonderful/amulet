@@ -2,52 +2,45 @@ use crate::geom::{Clip, Point, Rect, Shrink, Size, Vector};
 use crate::mouse::Button;
 use crate::VuiResult;
 
-mod area;
+mod frame;
 mod mouse_sensor;
 mod noop;
 mod position;
 
+pub use frame::Frame;
 pub use mouse_sensor::{MouseSensor, MouseSensorState};
 pub use position::Position;
-pub use area::Area;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FramedPosition {
-    pos: Point,
-    comp_rect: Option<Rect>,
+    absolute_position: Point,
+    frame_rect: Rect,
 }
 
 impl FramedPosition {
-    pub fn new(pos: Point, comp_rect: Rect) -> Self {
-        Self { pos, comp_rect: Some(comp_rect) }
+    pub fn new(pos: Point, frame_rect: Rect) -> Self {
+        Self {
+            absolute_position: pos,
+            frame_rect,
+        }
     }
 
     pub fn clip(self, vector: Vector) -> Self {
-        let Some(rect) = self.comp_rect else {
-            return self;
-        };
-
         Self {
-            pos: self.pos,
-            comp_rect: rect.clip(vector),
+            absolute_position: self.absolute_position,
+            frame_rect: self.frame_rect.clip(vector).unwrap_or_default(),
         }
     }
 
     pub fn shrink(self, size: Size) -> Self {
-        let Some(rect) = self.comp_rect else {
-            return self;
-        };
-
         Self {
-            pos: self.pos,
-            comp_rect: Some(rect.shrink(size)),
+            absolute_position: self.absolute_position,
+            frame_rect: self.frame_rect.shrink(size),
         }
     }
 
     pub fn is_hit(&self) -> bool {
-        self.comp_rect
-            .map(|rect| rect.contains(self.pos))
-            .unwrap_or(false)
+        self.frame_rect.contains(self.absolute_position)
     }
 }
 

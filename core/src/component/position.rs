@@ -25,7 +25,8 @@ where
     type State<'a> = C::State<'a>;
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        self.inner.handle_event(state, event.clip(self.value.to_vector()))
+        self.inner
+            .handle_event(state, event.clip(self.value.to_vector()))
     }
 }
 

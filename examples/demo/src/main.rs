@@ -1,5 +1,5 @@
 use amulet_core::component::{
-    Area, CalculateSize, ComponentEvent, HandleEvent, MouseSensor, MouseSensorState, Position,
+    CalculateSize, ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position,
     Render, RenderConstraints,
 };
 use amulet_core::geom::{Rect, Size};
@@ -65,7 +65,7 @@ struct GuiState {
 }
 
 struct Gui<'a> {
-    button: Position<Area<MouseSensor<Label<'a>>>>,
+    button: Position<Frame<MouseSensor<Label<'a>>>>,
     clicked_label: Position<Label<'a>>,
 }
 
@@ -75,7 +75,7 @@ impl<'a> Gui<'a> {
         let size = label.calculate_size();
 
         Self {
-            button: Position::new((10, 10).into(), Area::new(size, MouseSensor::new(label))),
+            button: Position::new((10, 10).into(), Frame::new(size, MouseSensor::new(label))),
             clicked_label: Position::new(
                 (10, 50).into(),
                 Label::new(

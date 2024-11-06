@@ -6,7 +6,6 @@ use std::fmt::{Debug, Display, Formatter};
 pub mod bitops;
 pub mod component;
 pub mod geom;
-pub mod math;
 pub mod mouse;
 
 pub type VuiResult<T> = Result<T, VuiError>;

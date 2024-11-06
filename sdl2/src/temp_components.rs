@@ -1,6 +1,8 @@
 use crate::map_error;
 use crate::render::RenderContext;
-use amulet_core::component::{CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints};
+use amulet_core::component::{
+    CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints,
+};
 use amulet_core::geom::Size;
 use amulet_core::VuiResult;
 use sdl2::pixels::Color;

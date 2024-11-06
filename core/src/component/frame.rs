@@ -3,21 +3,18 @@ use crate::geom::{Shrink, Size};
 use crate::VuiResult;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Area<C> {
+pub struct Frame<C> {
     size: Size,
     inner: C,
 }
 
-impl<C> Area<C> {
+impl<C> Frame<C> {
     pub fn new(size: Size, inner: C) -> Self {
-        Self {
-            size,
-            inner,
-        }
+        Self { size, inner }
     }
 }
 
-impl<C> HandleEvent for Area<C>
+impl<C> HandleEvent for Frame<C>
 where
     C: HandleEvent,
 {
@@ -28,7 +25,7 @@ where
     }
 }
 
-impl<C, R> Render<R> for Area<C>
+impl<C, R> Render<R> for Frame<C>
 where
     C: Render<R>,
 {
@@ -40,11 +37,12 @@ where
         constraints: RenderConstraints,
         render_ctx: R,
     ) -> VuiResult<()> {
-        self.inner.render(state, constraints.shrink(self.size), render_ctx)
+        self.inner
+            .render(state, constraints.shrink(self.size), render_ctx)
     }
 }
 
-impl<C> CalculateSize for Area<C> {
+impl<C> CalculateSize for Frame<C> {
     fn calculate_size(&self) -> Size {
         self.size
     }
@@ -57,5 +55,5 @@ mod test {
     use crate::component::sized_component_check;
 
     // Static check that we have all component traits implemented
-    const _: () = sized_component_check::<Area<Noop>, ()>();
+    const _: () = sized_component_check::<Frame<Noop>, ()>();
 }
