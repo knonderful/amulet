@@ -2,7 +2,7 @@ use crate::generator::{Generator, GeneratorMut};
 use crate::math::Size as MathSize;
 use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
 use crate::VuiResult;
-use sdl2::pixels::{Color, PixelFormatEnum};
+use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::surface::Surface;
 use sdl2::ttf::Font;
@@ -10,10 +10,35 @@ use std::borrow::Cow;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
+pub mod mouse_aware;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, strum::EnumCount, strum::EnumIter)]
+pub enum MouseButton {
+    Left,
+    Middle,
+    Right,
+}
+
+impl TryFrom<sdl2::mouse::MouseButton> for MouseButton {
+    type Error = ();
+
+    fn try_from(value: sdl2::mouse::MouseButton) -> Result<Self, Self::Error> {
+        use sdl2::mouse::MouseButton as MB;
+        let out = match value {
+            MB::Unknown | MB::X1 | MB::X2 => return Err(()),
+            MB::Left => MouseButton::Left,
+            MB::Middle => MouseButton::Middle,
+            MB::Right => MouseButton::Right
+        };
+        Ok(out)
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ComponentEvent {
-    MouseMove(Point),
-    MouseDown(Point), // TODO: Add button
+    MouseMotion(Point),
+    MouseButtonDown(MouseButton, Point),
+    MouseButtonUp(MouseButton, Point),
 }
 
 pub trait HandleEvent {
@@ -89,8 +114,9 @@ where
 {
     fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
         let event = match event {
-            ComponentEvent::MouseMove(pos) => ComponentEvent::MouseMove(pos - self.pos),
-            ComponentEvent::MouseDown(pos) => ComponentEvent::MouseDown(pos - self.pos),
+            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos - self.pos),
+            ComponentEvent::MouseButtonUp(btn, pos) => ComponentEvent::MouseButtonUp(btn, pos - self.pos),
+            ComponentEvent::MouseButtonDown(btn, pos) => ComponentEvent::MouseButtonDown(btn, pos - self.pos),
         };
 
         self.inner.handle_event(event)
@@ -263,76 +289,5 @@ where
             comp.render((dest, constraints.clone()))?;
         }
         Ok(())
-    }
-}
-
-pub struct MouseAware<C> {
-    inner: C,
-    hover: bool,
-}
-
-impl<C> MouseAware<C> {
-    pub fn new(inner: C) -> Self {
-        Self {
-            inner,
-            hover: false,
-        }
-    }
-}
-
-impl<C> Size for MouseAware<C>
-where
-    C: Size,
-{
-    fn size(&self) -> MathSize {
-        self.inner.size()
-    }
-}
-
-impl<C> HandleEvent for MouseAware<C>
-where
-    C: HandleEvent + Size,
-{
-    fn handle_event(&mut self, event: ComponentEvent) -> VuiResult<()> {
-        match event {
-            ComponentEvent::MouseMove(pos) => {
-                let size = self.size();
-                let rect = Rect::new(0, 0, size.w, size.h);
-                if rect.contains_point(pos) {
-                    self.hover = true;
-                    println!("MOUSE MOVE");
-                } else {
-                    self.hover = false;
-                    println!("MOUSE LEFT");
-                }
-            }
-            ComponentEvent::MouseDown(pos) => {
-                let size = self.size();
-                let rect = Rect::new(0, 0, size.w, size.h);
-                if rect.contains_point(pos) {
-                    println!("MOUSE CLICK");
-                }
-            }
-        }
-        self.inner.handle_event(event)
-    }
-}
-
-impl<C> Render for MouseAware<C>
-where
-    C: Render + Size,
-{
-    fn render(&self, mut target: (&mut RenderDestination, RenderConstraints)) -> VuiResult<()> {
-        if self.hover {
-            let size = self.size();
-            let surf = Surface::new(size.w, size.h, PixelFormatEnum::ARGB8888)?;
-            let mut canvas = surf.into_canvas()?;
-            canvas.set_draw_color(Color::RGB(0, 100, 0));
-            canvas.clear();
-            let surf = canvas.into_surface();
-            target.blit_surface(&surf)?;
-        }
-
-        self.inner.render(target)
     }
 }

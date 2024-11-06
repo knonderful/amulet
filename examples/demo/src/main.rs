@@ -1,13 +1,12 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect;
 use sdl2::ttf::Font;
 use std::path::PathBuf;
 use std::rc::Rc;
-use vui_core::component::{
-    ComponentEvent, HandleEvent, MouseAware, Pos, PositionalComponent, Render, Text, View,
-};
+use vui_core::component::mouse_aware::{MouseAware, MouseAwareCtx};
+use vui_core::component::{ComponentEvent, HandleEvent, MouseButton, Pos, PositionalComponent, Render, Text, View};
 use vui_core::font_manager::{FontDetails, FontManager};
 use vui_core::generator::Generator;
 use vui_core::math::Convert;
@@ -106,7 +105,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let veccy: Vec<Box<dyn PositionalComponent>> = vec![boxed];
     let view_3 = View::new(veccy);
 
-    let dyned = Pos::new(
+    let mut dyned = Pos::new(
         (240, 240).into(),
         Text::new(
             "LABEL BEHIND A DYN ARRAY".into(),
@@ -114,8 +113,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     );
 
-    let arr: [&dyn PositionalComponent; 1] = [&dyned];
-    let view_4 = View::new(arr.as_slice());
+    let mut arr: [&mut dyn PositionalComponent; 1] = [&mut dyned];
+    let view_4 = View::new(arr.as_mut_slice());
 
     let my_gui = MyGui {
         label_1: Pos::new(
@@ -135,15 +134,21 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let view_5 = View::new(my_gui);
 
-    let mut mouse_aware = Pos::new(
-        (100, 300).into(),
-        MouseAware::new(Text::new(
-            "MOUSE AWARE".into(),
-            ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
-        )),
-    );
+    let mut ma_ctx = MouseAwareCtx::default();
+    let mut click_count = 0;
 
     'running: loop {
+        let mut mouse_aware = Pos::new(
+            (100, 300).into(),
+            MouseAware::new(
+                &mut ma_ctx,
+                Text::new(
+                    "MOUSE AWARE".into(),
+                    ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
+                ),
+            ),
+        );
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -152,21 +157,35 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ..
                 } => break 'running,
                 Event::MouseMotion { x, y, .. } => {
-                    mouse_aware.handle_event(ComponentEvent::MouseMove(Point::new(x, y)))?;
+                    // (mouse_x, mouse_y) = (x,y);
+                    mouse_aware.handle_event(ComponentEvent::MouseMotion((x, y).into()))?;
                 }
-                Event::MouseButtonDown { x, y, .. } => {
-                    mouse_aware.handle_event(ComponentEvent::MouseDown(Point::new(x, y)))?;
+                Event::MouseButtonUp {
+                    x, y, mouse_btn, ..
+                } => {
+                    let Ok(btn) = mouse_btn.try_into() else {
+                        continue;
+                    };
+                    mouse_aware.handle_event(ComponentEvent::MouseButtonUp(btn, (x, y).into()))?;
                 }
-                // Event::Window { win_event, .. } => match win_event {
-                //     WindowEvent::SizeChanged(w, h) => {
-                //         window_w = w.convert_or(window_w);
-                //         window_h = h.convert_or(window_h);
-                //     }
-                //     _ => {}
-                // },
+                Event::MouseButtonDown {
+                    x, y, mouse_btn, ..
+                } => {
+                    let Ok(btn) = mouse_btn.try_into() else {
+                        continue;
+                    };
+                    mouse_aware
+                        .handle_event(ComponentEvent::MouseButtonDown(btn, (x, y).into()))?;
+                }
                 _ => {}
             }
         }
+
+        // view_4.handle_event(ComponentEvent::MousePosition((mouse_x, mouse_y).into()))?;
+        // view_4.handle_event(ComponentEvent::MouseClickState(mouse_clicked))?;
+        // view_4.handle_event(ComponentEvent::Finalize)?;
+
+        // mouse_aware.handle_event(ComponentEvent::Finalize)?;
 
         canvas.set_draw_color(Color::RGB(24, 24, 24));
         canvas.clear();
@@ -181,6 +200,23 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         view_5.render((&mut render_dest, constraints.clone()))?;
 
         mouse_aware.render((&mut render_dest, constraints.clone()))?;
+
+        let click_count_label = Pos::new(
+            (10, 400).into(),
+            Text::new(
+                format!("Click count: {click_count}").into(),
+                ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
+            ),
+        );
+        click_count_label.render((&mut render_dest, constraints.clone()))?;
+
+        if ma_ctx.click_started(MouseButton::Left) {
+            println!("CLICK STARTED");
+        }
+        if ma_ctx.click_completed(MouseButton::Left) {
+            println!("CLICK COMPLETED");
+            click_count += 1;
+        }
 
         canvas.present();
     }
