@@ -28,7 +28,7 @@ pub struct Button<'a> {
 
 impl<'a> Button<'a> {
     pub fn new(background: FramedTexture<'a>, label: FramedTexture<'a>) -> Self {
-        let total_size = background.rect.max.to_u32().to_vector().into();
+        let total_size = background.rect.limit().as_size();
         let (lbl_pos, lbl_frame, lbl_img) = label.into_stack();
         let component = (
             Frame::new(total_size),

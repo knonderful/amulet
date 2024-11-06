@@ -1,3 +1,4 @@
+use crate::lossy::LossyInto;
 use amulet_core::component::RenderConstraints;
 use sdl2::render::{Canvas, RenderTarget, WindowCanvas};
 use sdl2::video::Window;
@@ -35,10 +36,9 @@ impl SdlRender for RenderContext<'_> {
 
     fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target> {
         let rect = constraints.clip_rect();
-        let origin = rect.min;
-        let (w, h) = rect.size().cast().into();
+        let (x, y, w, h) = rect.into();
         self.canvas
-            .set_viewport(sdl2::rect::Rect::new(origin.x, origin.y, w, h));
+            .set_viewport(sdl2::rect::Rect::new(x, y, w.lossy_into(), h.lossy_into()));
         self.canvas
     }
 }

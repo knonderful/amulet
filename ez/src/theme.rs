@@ -1,5 +1,6 @@
 use amulet_core::geom::{Rect, Size};
 use amulet_core::{VuiError, VuiResult};
+use amulet_sdl2::lossy::LossyInto;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Canvas, RenderTarget};
 use sdl2::surface::Surface;
@@ -34,7 +35,7 @@ where
 {
     fn draw_amu_rect(&mut self, rect: Rect) -> VuiResult<()> {
         let points = {
-            let (x, y) = rect.max.into();
+            let (x, y) = rect.limit().into();
             [
                 sdl2::rect::Point::new(0, 0),
                 sdl2::rect::Point::new(x, 0),
@@ -57,7 +58,7 @@ where
     T: RenderTarget,
 {
     fn draw_border(&mut self, rect: Rect) -> VuiResult<()> {
-        let (x, y) = rect.max.into();
+        let (x, y) = rect.limit().into();
         self.draw_line(
             sdl2::rect::Point::new(1, 0),
             sdl2::rect::Point::new(x - 1, 0),
@@ -84,17 +85,22 @@ impl Theme<'_> {
     }
 
     pub fn label_size(&self, text: &str) -> VuiResult<Size> {
-        Ok(self.font.size_of(text)?.into())
+        let (w, h) = self.font.size_of(text)?;
+        Ok(Size::new(w.lossy_into(), h.lossy_into()))
     }
 
     pub fn button(&self, size: Size) -> VuiResult<Surface<'static>> {
-        let surface = Surface::new(size.width, size.height, PixelFormatEnum::RGB888)?;
+        let surface = Surface::new(
+            size.width.lossy_into(),
+            size.height.lossy_into(),
+            PixelFormatEnum::RGB888,
+        )?;
         let mut canvas = surface.into_canvas()?;
         canvas.set_draw_color(PRIMARY_BG);
         canvas.clear();
 
         canvas.set_draw_color(PRIMARY_EDGE);
-        canvas.draw_border(Rect::from_size(size.cast()).inflate(-1, -1))?;
+        canvas.draw_border(Rect::from_size(size).inflate(-1, -1))?;
         Ok(canvas.into_surface())
     }
 }

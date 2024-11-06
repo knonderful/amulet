@@ -30,6 +30,6 @@ impl FramedTexture<'_> {
     }
 
     pub fn size(&self) -> Size {
-        self.rect.size().cast()
+        self.rect.size
     }
 }

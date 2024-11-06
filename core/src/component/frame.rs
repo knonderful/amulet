@@ -25,7 +25,7 @@ impl HandleEvent for Frame {
         _state: Self::State<'_>,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
-        Ok(event.shrink(self.size))
+        Ok(event.resize(self.size))
     }
 }
 
@@ -38,6 +38,6 @@ impl<R> Render<R> for Frame {
         constraints: RenderConstraints,
         _render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
-        Ok(constraints.shrink(self.size))
+        Ok(constraints.resize(self.size))
     }
 }

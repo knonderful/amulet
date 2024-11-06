@@ -25,7 +25,7 @@ impl HandleEvent for Position {
         _state: Self::State<'_>,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
-        Ok(event.clip(self.value.to_vector()))
+        Ok(event.clip(self.value.as_vector()))
     }
 }
 
@@ -38,6 +38,6 @@ impl<R> Render<R> for Position {
         constraints: RenderConstraints,
         _render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
-        Ok(constraints.clip(self.value.to_vector()))
+        Ok(constraints.clip(self.value.as_vector()))
     }
 }

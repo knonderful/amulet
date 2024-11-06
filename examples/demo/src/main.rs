@@ -3,6 +3,7 @@ use amulet_core::geom::{Point, Rect, Size, Vector};
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
 use amulet_ez::widget::{Button, ButtonState, WidgetFactory};
+use amulet_sdl2::lossy::LossyInto;
 use amulet_sdl2::render::{RenderContext, SdlRender};
 use amulet_sdl2::{event_iterator, Event};
 use sdl2::event::{Event as SdlEvent, WindowEvent};
@@ -73,8 +74,7 @@ impl<'a> MainForm<'a> {
     }
 
     fn calc_anchor(rect: Rect, size: Size) -> Position {
-        let (dx, dy) = size.to_i32().into();
-        Position::new((rect.max - Point::new(dx, dy)).to_point())
+        Position::new(rect.limit() - size.as_vector())
     }
 
     fn anchor_bottom_right(rect: Rect, component: &mut (Position, Button)) -> Point {
@@ -114,9 +114,9 @@ impl<'a> MainForm<'a> {
 
     fn resize(&mut self, rect: Rect) -> VuiResult<()> {
         let pos = Self::anchor_bottom_right(rect, &mut self.btn_ok);
-        let rect = rect.translate(Vector::new(pos.x - rect.size().width - 10, 0));
+        let rect = rect.translate(Vector::new(pos.x - rect.size.width - 10, 0));
         let pos = Self::anchor_bottom_right(rect, &mut self.btn_defaults);
-        let rect = rect.translate(Vector::new(pos.x - rect.size().width - 10, 0));
+        let rect = rect.translate(Vector::new(pos.x - rect.size.width - 10, 0));
         Self::anchor_bottom_right(rect, &mut self.btn_cancel);
 
         Ok(())
@@ -185,8 +185,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     let mut window_rect = ChangeDetector::new({
-        let (w, h) = window.size();
-        Rect::from_size(Size::new(w, h).cast())
+        let size: (i32, i32) = window.size().lossy_into();
+        Rect::from_size(size.into())
     });
 
     let mut canvas = window.into_canvas().present_vsync().build()?;
@@ -219,8 +219,12 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ..
                     } => break 'running,
                     SdlEvent::Window { win_event, .. } => match win_event {
-                        WindowEvent::SizeChanged(x, y) => window_rect.set_size((x, y).into()),
-                        WindowEvent::Resized(x, y) => window_rect.set_size((x, y).into()),
+                        WindowEvent::SizeChanged(x, y) => {
+                            *window_rect = window_rect.resize((x, y).into());
+                        }
+                        WindowEvent::Resized(x, y) => {
+                            *window_rect = window_rect.resize((x, y).into());
+                        }
                         _ => {}
                     },
                     _ => {}

@@ -3,8 +3,8 @@ mod factory;
 
 use crate::FramedTexture;
 use amulet_core::component::{Frame, HandleEvent, Position, Render, RenderConstraints};
-use amulet_core::geom::Size;
 use amulet_core::VuiResult;
+use amulet_sdl2::lossy::LossyInto;
 use amulet_sdl2::render::SdlRender;
 pub use button::{Button, ButtonState};
 pub use factory::WidgetFactory;
@@ -38,8 +38,9 @@ where
         render_ctx: &mut R,
     ) -> VuiResult<RenderConstraints> {
         let rect = {
-            let size: Size = constraints.clip_rect().size().cast();
-            sdl2::rect::Rect::new(0, 0, size.width, size.height)
+            let size: (i32, i32) = constraints.clip_rect().size.into();
+            let (w, h) = size.lossy_into();
+            sdl2::rect::Rect::new(0, 0, w, h)
         };
 
         let canvas = render_ctx.get_canvas(constraints.clone());
@@ -60,8 +61,8 @@ impl<'a> IntoStack for FramedTexture<'a> {
     fn into_stack(self) -> Self::Output {
         let FramedTexture { rect, texture } = self;
         (
-            Position::new(rect.min),
-            Frame::new(rect.size().cast()),
+            Position::new(rect.origin),
+            Frame::new(rect.size),
             Image::new(texture),
         )
     }

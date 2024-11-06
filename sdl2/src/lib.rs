@@ -4,6 +4,7 @@ use sdl2::render::TextureValueError;
 use sdl2::ttf::FontError;
 use sdl2::EventPump;
 
+pub mod lossy;
 pub mod render;
 
 fn map_mouse_button(value: sdl2::mouse::MouseButton) -> Option<mouse::Button> {

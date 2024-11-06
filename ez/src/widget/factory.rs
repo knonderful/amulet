@@ -3,6 +3,7 @@ use crate::widget::Button;
 use crate::FramedTexture;
 use amulet_core::geom::{Rect, Size};
 use amulet_core::VuiResult;
+use amulet_sdl2::lossy::LossyInto;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
 
@@ -60,20 +61,25 @@ impl<'a> WidgetFactory<'a> {
 impl<'a> WidgetFactory<'a> {
     fn create_button(&self, text: &str, label_size: Option<Size>) -> VuiResult<Button<'a>> {
         let label_surf = self.theme.label(text)?;
-        let label_size = label_size.unwrap_or_else(|| Size::from(label_surf.size()));
-        let diff_size = label_size - label_surf.size().into();
-        let (x, y): (i32, i32) = diff_size.cast().into();
-        let label_rect = Rect::from_size(Size::from(label_surf.size()).cast())
+        let label_surf_size = {
+            let size: (i32, i32) = label_surf.size().lossy_into();
+            Size::from(size)
+        };
+
+        let label_size = label_size.unwrap_or(label_surf_size);
+        let diff_size = label_size - label_surf_size;
+        let (x, y): (i32, i32) = diff_size.into();
+        let label_rect = Rect::from_size(label_surf_size)
             .translate((PADDING_H, PADDING_V).into())
             .translate((x / 2, y / 2).into());
         let label = FramedTexture::new(label_rect, label_surf.as_texture(self.texture_creator)?);
 
         let button_rect = {
-            let size = label_size + Size::new(PADDING_H as u32 * 2, PADDING_V as u32 * 2);
-            Rect::from_size(size.cast())
+            let size = label_size + Size::new(PADDING_H * 2, PADDING_V * 2);
+            Rect::from_size(size)
         };
 
-        let button_surf = self.theme.button(button_rect.size().cast())?;
+        let button_surf = self.theme.button(button_rect.size)?;
         let background =
             FramedTexture::new(button_rect, button_surf.as_texture(self.texture_creator)?);
 

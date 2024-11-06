@@ -1,4 +1,4 @@
-use crate::geom::{Clip, Point, Rect, Shrink, Size, Vector};
+use crate::geom::{Point, Rect, Size, Vector};
 use crate::mouse::Button;
 use crate::VuiResult;
 pub use frame::Frame;
@@ -27,14 +27,14 @@ impl FramedPosition {
     pub fn clip(self, vector: Vector) -> Self {
         Self {
             absolute_position: self.absolute_position,
-            frame_rect: self.frame_rect.clip(vector).unwrap_or_default(),
+            frame_rect: self.frame_rect.clip(vector),
         }
     }
 
-    pub fn shrink(self, size: Size) -> Self {
+    pub fn resize(self, size: Size) -> Self {
         Self {
             absolute_position: self.absolute_position,
-            frame_rect: self.frame_rect.shrink(size).unwrap_or_default(),
+            frame_rect: self.frame_rect.resize(size),
         }
     }
 
@@ -65,14 +65,14 @@ impl ComponentEvent {
         }
     }
 
-    pub fn shrink(self, size: Size) -> Self {
+    pub fn resize(self, size: Size) -> Self {
         match self {
-            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos.shrink(size)),
+            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos.resize(size)),
             ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, pos.shrink(size))
+                ComponentEvent::MouseButtonDown(btn, pos.resize(size))
             }
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, pos.shrink(size))
+                ComponentEvent::MouseButtonUp(btn, pos.resize(size))
             }
             other => other,
         }
@@ -94,10 +94,10 @@ impl RenderConstraints {
     }
 
     pub fn clip(&self, vector: Vector) -> Self {
-        Self::new(self.clip_rect.clip(vector).unwrap_or_default())
+        Self::new(self.clip_rect.clip(vector))
     }
-    pub fn shrink(&self, size: Size) -> Self {
-        Self::new(self.clip_rect.shrink(size).unwrap_or_default())
+    pub fn resize(&self, size: Size) -> Self {
+        Self::new(self.clip_rect.resize(size))
     }
 }
 
