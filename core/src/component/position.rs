@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, PositionAttr, Render, RenderConstraints};
+use crate::component::{AdjustLayout, ComponentEvent, HandleEvent, Layout, PositionAttr};
 use crate::geom::Point;
 use crate::VuiResult;
 
@@ -31,15 +31,10 @@ impl HandleEvent for Position {
     }
 }
 
-impl<R> Render<R> for Position {
+impl AdjustLayout for Position {
     type State<'a> = ();
 
-    fn render(
-        &self,
-        _state: Self::State<'_>,
-        constraints: RenderConstraints,
-        _render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
-        Ok(constraints.clip(self.value.as_vector()))
+    fn adjust_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+        Ok(layout.clip(self.value.as_vector()))
     }
 }

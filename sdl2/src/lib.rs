@@ -1,7 +1,5 @@
 use amulet_core::{mouse, GlobalEvent};
 use sdl2::event::Event as SdlEvent;
-use sdl2::render::TextureValueError;
-use sdl2::ttf::FontError;
 use sdl2::EventPump;
 
 pub mod lossy;
@@ -62,21 +60,5 @@ pub fn event_iterator(event_pump: &mut EventPump) -> impl Iterator<Item = Event>
     EventIter {
         pre_iter,
         event_iter,
-    }
-}
-
-trait TypeName {
-    fn type_name() -> &'static str;
-}
-
-impl TypeName for TextureValueError {
-    fn type_name() -> &'static str {
-        "TextureValueError"
-    }
-}
-
-impl TypeName for FontError {
-    fn type_name() -> &'static str {
-        "FontError"
     }
 }

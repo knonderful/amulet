@@ -1,12 +1,12 @@
 use crate::widget::Image;
 use amulet_core::component::{
-    ComponentEvent, Frame, HandleEvent, MouseSensor, MouseSensorState, Position, Render,
-    RenderConstraints, SizeAttr,
+    AdjustLayout, AsChain, ComponentEvent, Frame, HandleEvent, Layout, MouseSensor,
+    MouseSensorState, Position, SizeAttr,
 };
 use amulet_core::geom::Size;
 use amulet_core::mouse::Button as MouseButton;
 use amulet_core::VuiResult;
-use amulet_sdl2::render::SdlRender;
+use amulet_sdl2::render::{Render, RenderContext};
 
 #[derive(Debug, Default)]
 pub struct ButtonState {
@@ -22,12 +22,31 @@ impl ButtonState {
 }
 
 pub struct Button<'a> {
-    pub(crate) component: (Frame, MouseSensor, Image<'a>, Position, Frame),
+    outer: (Frame, MouseSensor),
+    inner: (Position, Frame, Position),
+    background: Image<'a>,
+    content: Image<'a>,
 }
 
 impl SizeAttr for Button<'_> {
     fn size(&self) -> Size {
-        self.component.0.size()
+        self.outer.0.size()
+    }
+}
+
+impl<'a> Button<'a> {
+    pub fn new(
+        outer: (Frame, MouseSensor),
+        inner: (Position, Frame, Position),
+        background: Image<'a>,
+        content: Image<'a>,
+    ) -> Self {
+        Self {
+            outer,
+            inner,
+            background,
+            content,
+        }
     }
 }
 
@@ -39,24 +58,24 @@ impl HandleEvent for Button<'_> {
         state: Self::State<'_>,
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
-        let state = ((), &mut state.mouse_sensor, (), (), ());
-        self.component.handle_event(state, event.clone())
+        (self.outer.as_chain(), self.inner.as_chain())
+            .as_chain()
+            .handle_event((((), &mut state.mouse_sensor), ((), (), ())), event)
     }
 }
 
-impl<R> Render<R> for Button<'_>
-where
-    R: SdlRender,
-{
+impl Render for Button<'_> {
     type State<'a> = &'a ButtonState;
 
     fn render(
         &self,
         _state: Self::State<'_>,
-        constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
-        let state = ((), (), (), (), ());
-        self.component.render(state, constraints, render_ctx)
+        layout: Layout,
+        render_context: &mut RenderContext,
+    ) -> VuiResult<()> {
+        let layout = self.outer.as_chain().adjust_layout(((), ()), layout)?;
+        self.background.render((), layout.clone(), render_context)?;
+        let layout = self.inner.as_chain().adjust_layout(((), (), ()), layout)?;
+        self.content.render((), layout, render_context)
     }
 }

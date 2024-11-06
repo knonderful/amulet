@@ -53,6 +53,10 @@ impl Rect {
         Self::new(self.origin, size)
     }
 
+    pub fn resize_clipped(&self, size: Size) -> Self {
+        Self::new(self.origin, self.size.min(size))
+    }
+
     pub fn contains(&self, point: Point) -> bool {
         if point.x < self.origin.x || point.y < self.origin.y {
             return false;

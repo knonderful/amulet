@@ -1,11 +1,12 @@
 use amulet_core::component::{
-    ComponentEvent, HandleEvent, Position, PositionAttr, Render, RenderConstraints, SizeAttr,
+    AdjustLayout, AsChain, ComponentEvent, Frame, HandleEvent, Layout, Position, PositionAttr,
+    SizeAttr,
 };
 use amulet_core::geom::{Point, Rect, Size};
 use amulet_core::VuiResult;
 use amulet_ez::theme::Theme;
-use amulet_ez::widget::{Button, ButtonState, Image};
-use amulet_sdl2::render::SdlRender;
+use amulet_ez::widget::{Button, ButtonState};
+use amulet_sdl2::render::{Render, RenderContext};
 
 #[derive(Debug, Default)]
 pub struct MainFormState {
@@ -17,24 +18,25 @@ pub struct MainFormState {
 
 pub struct MainForm<'a> {
     widget_factory: &'a Theme<'a>,
-    button: (Position, Button<'a>, Image<'a>),
+    button: (Position, Button<'a>),
     /// Anchor position for `btn_*` components.
     anchor: Position,
-    btn_ok: (Position, Button<'a>, Position, Image<'a>),
-    btn_defaults: (Position, Button<'a>, Position, Image<'a>),
-    btn_cancel: (Position, Button<'a>, Position, Image<'a>),
+    btn_ok: (Position, Button<'a>),
+    btn_defaults: (Position, Button<'a>),
+    btn_cancel: (Position, Button<'a>),
 }
 
 trait AlignCenter {
-    fn align_center(&self, max_size: Size) -> Position;
+    fn align_center(self, max_size: Size) -> (Frame, Position, Self);
 }
 
 impl<T> AlignCenter for T
 where
     T: SizeAttr,
 {
-    fn align_center(&self, max_size: Size) -> Position {
-        Position::new(((max_size - self.size()) / 2).as_vector().as_point())
+    fn align_center(self, max_size: Size) -> (Frame, Position, Self) {
+        let position = Position::new(((max_size - self.size()) / 2).as_vector().as_point());
+        (Frame::new(max_size), position, self)
     }
 }
 
@@ -52,25 +54,16 @@ impl<'a> MainForm<'a> {
 
         let spacing = 8;
         let pos = Point::zero();
-        let btn_ok = (
-            Position::new(pos),
-            theme.button(max)?,
-            lbl_ok.align_center(max),
-            lbl_ok,
-        );
+        let btn_ok = (Position::new(pos), theme.button(lbl_ok.align_center(max))?);
         let pos = pos + Point::new(btn_ok.1.size().width + spacing, 0);
         let btn_defaults = (
             Position::new(pos),
-            theme.button(max)?,
-            lbl_defaults.align_center(max),
-            lbl_defaults,
+            theme.button(lbl_defaults.align_center(max))?,
         );
         let pos = pos + Point::new(btn_defaults.1.size().width + spacing, 0);
         let btn_cancel = (
             Position::new(pos),
-            theme.button(max)?,
-            lbl_cancel.align_center(max),
-            lbl_cancel,
+            theme.button(lbl_cancel.align_center(max))?,
         );
         let anchor = Self::calc_anchor(rect, &btn_cancel);
 
@@ -84,19 +77,13 @@ impl<'a> MainForm<'a> {
         })
     }
 
-    fn create_button(
-        theme: &'a Theme<'a>,
-        click_count: u64,
-    ) -> VuiResult<(Position, Button<'a>, Image<'a>)> {
+    fn create_button(theme: &'a Theme<'a>, click_count: u64) -> VuiResult<(Position, Button<'a>)> {
         let text = theme.label(&format!("EZ Button ({} clicks)", click_count))?;
-        Ok((
-            Position::new((80, 100).into()),
-            theme.button(text.size())?,
-            text,
-        ))
+        let content = (Frame::new(text.size()), Position::new(Point::zero()), text);
+        Ok((Position::new((80, 100).into()), theme.button(content)?))
     }
 
-    fn calc_anchor(rect: Rect, btn: &(Position, Button, Position, Image)) -> Position {
+    fn calc_anchor(rect: Rect, btn: &(Position, Button)) -> Position {
         Position::new(rect.limit() - Rect::new(btn.0.position(), btn.1.size()).limit())
     }
 
@@ -120,52 +107,43 @@ impl HandleEvent for MainForm<'_> {
         event: ComponentEvent,
     ) -> VuiResult<ComponentEvent> {
         self.button
-            .handle_event(((), &mut gui_state.button, ()), event.clone())?;
+            .as_chain()
+            .handle_event(((), &mut gui_state.button), event.clone())?;
         let event = self.anchor.handle_event((), event)?;
         self.btn_ok
-            .handle_event(((), &mut gui_state.btn_ok, (), ()), event.clone())?;
+            .as_chain()
+            .handle_event(((), &mut gui_state.btn_ok), event.clone())?;
         self.btn_defaults
-            .handle_event(((), &mut gui_state.btn_defaults, (), ()), event.clone())?;
+            .as_chain()
+            .handle_event(((), &mut gui_state.btn_defaults), event.clone())?;
         self.btn_cancel
-            .handle_event(((), &mut gui_state.btn_cancel, (), ()), event.clone())?;
+            .as_chain()
+            .handle_event(((), &mut gui_state.btn_cancel), event.clone())?;
 
         // Kind of nonsensical =)
         Ok(event)
     }
 }
 
-impl<R> Render<R> for MainForm<'_>
-where
-    R: SdlRender,
-{
+impl Render for MainForm<'_> {
     type State<'a> = &'a MainFormState;
 
     fn render(
         &self,
         gui_state: Self::State<'_>,
-        constraints: RenderConstraints,
-        render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
+        layout: Layout,
+        render_ctx: &mut RenderContext,
+    ) -> VuiResult<()> {
         self.button
-            .render(((), &gui_state.button, ()), constraints.clone(), render_ctx)?;
-        let constraints = self.anchor.render((), constraints, render_ctx)?;
-        self.btn_ok.render(
-            ((), &gui_state.btn_ok, (), ()),
-            constraints.clone(),
-            render_ctx,
-        )?;
-        self.btn_defaults.render(
-            ((), &gui_state.btn_defaults, (), ()),
-            constraints.clone(),
-            render_ctx,
-        )?;
-        self.btn_cancel.render(
-            ((), &gui_state.btn_cancel, (), ()),
-            constraints.clone(),
-            render_ctx,
-        )?;
+            .render(((), &gui_state.button), layout.clone(), render_ctx)?;
+        let layout = self.anchor.adjust_layout((), layout)?;
+        self.btn_ok
+            .render(((), &gui_state.btn_ok), layout.clone(), render_ctx)?;
+        self.btn_defaults
+            .render(((), &gui_state.btn_defaults), layout.clone(), render_ctx)?;
+        self.btn_cancel
+            .render(((), &gui_state.btn_cancel), layout.clone(), render_ctx)?;
 
-        // Kind of nonsensical =)
-        Ok(constraints)
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, Render};
+use crate::component::{AdjustLayout, ComponentEvent, HandleEvent};
 use crate::mouse::{ClickStates, HoverState};
 use crate::VuiResult;
 
@@ -66,6 +66,6 @@ impl HandleEvent for MouseSensor {
     }
 }
 
-impl<R> Render<R> for MouseSensor {
+impl AdjustLayout for MouseSensor {
     type State<'a> = ();
 }

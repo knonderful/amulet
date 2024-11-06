@@ -1,4 +1,4 @@
-use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints, SizeAttr};
+use crate::component::{AdjustLayout, ComponentEvent, HandleEvent, Layout, SizeAttr};
 use crate::geom::Size;
 use crate::VuiResult;
 
@@ -31,15 +31,10 @@ impl HandleEvent for Frame {
     }
 }
 
-impl<R> Render<R> for Frame {
+impl AdjustLayout for Frame {
     type State<'a> = ();
 
-    fn render(
-        &self,
-        _state: Self::State<'_>,
-        constraints: RenderConstraints,
-        _render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
-        Ok(constraints.resize(self.size))
+    fn adjust_layout(&self, _state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+        Ok(layout.resize_clipped(self.size))
     }
 }

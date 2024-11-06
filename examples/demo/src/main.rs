@@ -1,9 +1,9 @@
 use crate::ui::main_form::{MainForm, MainFormState};
-use amulet_core::component::{HandleEvent, Render, RenderConstraints};
+use amulet_core::component::{HandleEvent, Layout};
 use amulet_core::geom::Rect;
 use amulet_ez::theme::Theme;
 use amulet_sdl2::lossy::LossyInto;
-use amulet_sdl2::render::RenderContext;
+use amulet_sdl2::render::{Render, RenderContext};
 use amulet_sdl2::{event_iterator, Event};
 use sdl2::event::{Event as SdlEvent, WindowEvent};
 use sdl2::keyboard::Keycode;
@@ -115,8 +115,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.clear();
 
         let mut render_ctx = RenderContext::new(&mut canvas);
-        let constraints = RenderConstraints::new(*window_rect);
-        main_form.render(&main_form_state, constraints, &mut render_ctx)?;
+        let layout = Layout::new(*window_rect);
+        main_form.render(&main_form_state, layout, &mut render_ctx)?;
 
         canvas.present();
 

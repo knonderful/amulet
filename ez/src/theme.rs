@@ -1,5 +1,5 @@
 use crate::widget::{Button, Image};
-use amulet_core::component::{Frame, MouseSensor, Position};
+use amulet_core::component::{Frame, MouseSensor, Position, SizeAttr};
 use amulet_core::geom::{Rect, Size};
 use amulet_core::{VuiError, VuiResult};
 use amulet_sdl2::lossy::LossyInto;
@@ -75,7 +75,9 @@ impl Theme<'_> {
         Ok(Image::new(texture, size.into()))
     }
 
-    pub fn button(&self, content_size: Size) -> VuiResult<Button> {
+    pub fn button<'a>(&'a self, content: (Frame, Position, Image<'a>)) -> VuiResult<Button<'a>> {
+        let (content_frame, content_pos, content_img) = content;
+        let content_size = content_frame.size();
         let button_size = content_size + Size::new(PADDING_H * 2, PADDING_V * 2);
         let surface = Surface::new(
             button_size.width.lossy_into(),
@@ -95,14 +97,13 @@ impl Theme<'_> {
             button_size,
         );
 
-        let component = (
-            Frame::new(button_size),
-            MouseSensor::new(),
-            bg_image,
+        let outer = (Frame::new(button_size), MouseSensor::new());
+        let inner = (
             Position::new((PADDING_H, PADDING_V).into()),
-            Frame::new(content_size),
+            content_frame,
+            content_pos,
         );
 
-        Ok(Button { component })
+        Ok(Button::new(outer, inner, bg_image, content_img))
     }
 }

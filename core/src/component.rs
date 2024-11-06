@@ -31,10 +31,10 @@ impl FramedPosition {
         }
     }
 
-    pub fn resize(self, size: Size) -> Self {
+    pub fn resize_clipped(self, size: Size) -> Self {
         Self {
             absolute_position: self.absolute_position,
-            frame_rect: self.frame_rect.resize(size),
+            frame_rect: self.frame_rect.resize_clipped(size),
         }
     }
 
@@ -67,37 +67,17 @@ impl ComponentEvent {
 
     pub fn resize(self, size: Size) -> Self {
         match self {
-            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos.resize(size)),
+            ComponentEvent::MouseMotion(pos) => {
+                ComponentEvent::MouseMotion(pos.resize_clipped(size))
+            }
             ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, pos.resize(size))
+                ComponentEvent::MouseButtonDown(btn, pos.resize_clipped(size))
             }
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, pos.resize(size))
+                ComponentEvent::MouseButtonUp(btn, pos.resize_clipped(size))
             }
             other => other,
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct RenderConstraints {
-    clip_rect: Rect,
-}
-
-impl RenderConstraints {
-    pub fn new(clip_rect: Rect) -> Self {
-        Self { clip_rect }
-    }
-
-    pub fn clip_rect(&self) -> Rect {
-        self.clip_rect
-    }
-
-    pub fn clip(&self, vector: Vector) -> Self {
-        Self::new(self.clip_rect.clip(vector))
-    }
-    pub fn resize(&self, size: Size) -> Self {
-        Self::new(self.clip_rect.resize(size))
     }
 }
 
@@ -113,28 +93,94 @@ pub trait HandleEvent {
     }
 }
 
-pub trait Render<R> {
-    type State<'a>;
+impl<T> HandleEvent for &T
+where
+    T: HandleEvent,
+{
+    type State<'a> = T::State<'a>;
 
-    fn render(
+    fn handle_event(
         &self,
-        #[allow(unused)] state: Self::State<'_>,
-        constraints: RenderConstraints,
-        #[allow(unused)] render_ctx: &mut R,
-    ) -> VuiResult<RenderConstraints> {
-        Ok(constraints)
+        state: Self::State<'_>,
+        event: ComponentEvent,
+    ) -> VuiResult<ComponentEvent> {
+        (*self).handle_event(state, event)
     }
 }
 
-macro_rules! impl_tuple_handle_event {
+pub trait AdjustLayout {
+    type State<'a>;
+
+    fn adjust_layout(
+        &self,
+        #[allow(unused)] state: Self::State<'_>,
+        layout: Layout,
+    ) -> VuiResult<Layout> {
+        Ok(layout)
+    }
+}
+
+impl<T> AdjustLayout for &T
+where
+    T: AdjustLayout,
+{
+    type State<'a> = T::State<'a>;
+
+    fn adjust_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
+        (*self).adjust_layout(state, layout)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Layout {
+    clip_rect: Rect,
+}
+
+impl Layout {
+    pub fn new(clip_rect: Rect) -> Self {
+        Self { clip_rect }
+    }
+
+    pub fn clip_rect(&self) -> Rect {
+        self.clip_rect
+    }
+
+    pub fn clip(&self, vector: Vector) -> Self {
+        Self::new(self.clip_rect.clip(vector))
+    }
+
+    pub fn resize_clipped(&self, size: Size) -> Self {
+        Self::new(self.clip_rect.resize_clipped(size))
+    }
+}
+
+pub struct ComponentChain<T> {
+    components: T,
+}
+
+pub trait AsChain {
+    type Target<'a>
+    where
+        Self: 'a;
+
+    fn as_chain(&self) -> Self::Target<'_>;
+}
+
+impl<T> ComponentChain<T> {
+    pub fn new(components: T) -> Self {
+        Self { components }
+    }
+}
+
+macro_rules! impl_tuple_component {
     ( () ) => {};
     ( ( $t0:ident $(, $tx:ident)* ) ) => {
-        impl<$t0, $($tx,)*> HandleEvent for ($t0, $($tx,)*) where $t0 : HandleEvent, $($tx : HandleEvent,)* {
+        impl<$t0, $($tx,)*> HandleEvent for ComponentChain<&($t0, $($tx,)*)> where $t0 : HandleEvent, $($tx : HandleEvent,)* {
             type State<'a> = ($t0::State<'a>, $($tx::State<'a>,)*);
 
             fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<ComponentEvent> {
                 paste!{
-                    let ([<$t0:lower>], $([<$tx:lower>],)*) = self;
+                    let ([<$t0:lower>], $([<$tx:lower>],)*) = &self.components;
                     let ([<$t0:lower _state>], $([<$tx:lower _state>],)*) = state;
 
                     let event = [<$t0:lower>].handle_event([<$t0:lower _state>], event)?;
@@ -146,37 +192,37 @@ macro_rules! impl_tuple_handle_event {
             }
         }
 
-        impl_tuple_handle_event! { ($($tx),*) }
-    };
-}
-
-macro_rules! impl_tuple_render {
-    ( () ) => {};
-    ( ( $t0:ident $(, $tx:ident)* ) ) => {
-        impl<RdrCtx, $t0, $($tx,)*> Render<RdrCtx> for ($t0, $($tx,)*) where $t0 : Render<RdrCtx>, $($tx : Render<RdrCtx>,)* {
+        impl<$t0, $($tx,)*> AdjustLayout for ComponentChain<&($t0, $($tx,)*)> where $t0 : AdjustLayout, $($tx : AdjustLayout,)* {
             type State<'a> = ($t0::State<'a>, $($tx::State<'a>,)*);
 
-            fn render(&self, state: Self::State<'_>, constraints: RenderConstraints, render_ctx: &mut RdrCtx) -> VuiResult<RenderConstraints> {
+            fn adjust_layout(&self, state: Self::State<'_>, layout: Layout) -> VuiResult<Layout> {
                 paste!{
-                    let ([<$t0:lower>], $([<$tx:lower>],)*) = self;
+                    let ([<$t0:lower>], $([<$tx:lower>],)*) = &self.components;
                     let ([<$t0:lower _state>], $([<$tx:lower _state>],)*) = state;
 
-                    let constraints = [<$t0:lower>].render([<$t0:lower _state>], constraints, render_ctx)?;
+                    let layout = [<$t0:lower>].adjust_layout([<$t0:lower _state>], layout)?;
                     $(
-                    let constraints = [<$tx:lower>].render([<$tx:lower _state>], constraints, render_ctx)?;
+                    let layout = [<$tx:lower>].adjust_layout([<$tx:lower _state>], layout)?;
                     )*
                 }
-                Ok(constraints)
+                Ok(layout)
             }
 
         }
 
-        impl_tuple_render! { ($($tx),*) }
+        impl<$t0, $($tx,)*> AsChain for ($t0, $($tx,)*) {
+            type Target<'a> = ComponentChain<&'a Self> where $t0 : 'a, $($tx : 'a,)*;
+
+            fn as_chain(&self) -> Self::Target<'_> {
+                ComponentChain::new(self)
+            }
+        }
+
+        impl_tuple_component! { ($($tx),*) }
     };
 }
 
-impl_tuple_handle_event! {(A, B, C, E, F, G, H, I, J, K)}
-impl_tuple_render! {(A, B, C, E, F, G, H, I, J, K)}
+impl_tuple_component! {(A, B, C, E, F, G, H, I, J, K)}
 
 pub trait SizeAttr {
     fn size(&self) -> Size;
@@ -184,4 +230,45 @@ pub trait SizeAttr {
 
 pub trait PositionAttr {
     fn position(&self) -> Point;
+}
+
+#[cfg(test)]
+mod test {
+    use crate::component::{
+        AdjustLayout, AsChain, ComponentEvent, Frame, FramedPosition, HandleEvent, Layout, Position,
+    };
+    use crate::geom::{Point, Rect};
+
+    #[test]
+    fn test_into_chain_handle_event() {
+        let comps = (
+            Position::new((12, 34).into()),
+            Frame::new((100, 200).into()),
+        );
+        let state = ((), ());
+        let event = ComponentEvent::MouseMotion(FramedPosition::new(
+            Point::new(123, 456),
+            Rect::from_size((80, 300).into()),
+        ));
+        let event = comps.as_chain().handle_event(state, event).unwrap();
+        let expected_event = ComponentEvent::MouseMotion(FramedPosition::new(
+            Point::new(123, 456),
+            Rect::from_xywh(12, 34, 68, 200),
+        ));
+        assert_eq!(expected_event, event);
+    }
+
+    #[test]
+    fn test_into_chain_adjust_layout() {
+        let comps = (
+            Position::new((12, 34).into()),
+            Frame::new((100, 200).into()),
+        );
+        let state = ((), ());
+        let layout = Layout::new(Rect::from_xywh(600, 700, 200, 180));
+        let layout = comps.as_chain().adjust_layout(state, layout).unwrap();
+        let expected_layout = Layout::new(Rect::from_xywh(612, 734, 100, 146));
+
+        assert_eq!(expected_layout, layout);
+    }
 }

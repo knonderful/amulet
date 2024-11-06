@@ -1,23 +1,37 @@
 use crate::lossy::LossyInto;
-use amulet_core::component::RenderConstraints;
-use sdl2::render::{Canvas, RenderTarget, WindowCanvas};
+use amulet_core::component::{AdjustLayout, Layout};
+use amulet_core::VuiResult;
+use sdl2::render::{Canvas, WindowCanvas};
 use sdl2::video::Window;
-use std::ops::DerefMut;
 
-pub trait SdlRender {
-    type Target: RenderTarget;
+pub trait Render {
+    type State<'a>;
 
-    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target>;
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        layout: Layout,
+        render_context: &mut RenderContext,
+    ) -> VuiResult<()>;
 }
 
-impl<R> SdlRender for &mut R
+impl<A, Z> Render for (A, Z)
 where
-    R: SdlRender,
+    A: AdjustLayout,
+    Z: Render,
 {
-    type Target = R::Target;
+    type State<'a> = (A::State<'a>, Z::State<'a>);
 
-    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target> {
-        self.deref_mut().get_canvas(constraints)
+    fn render(
+        &self,
+        state: Self::State<'_>,
+        layout: Layout,
+        render_context: &mut RenderContext,
+    ) -> VuiResult<()> {
+        let (a, z) = self;
+        let (a_state, z_state) = state;
+        let layout = a.adjust_layout(a_state, layout)?;
+        z.render(z_state, layout, render_context)
     }
 }
 
@@ -29,13 +43,9 @@ impl<'a> RenderContext<'a> {
     pub fn new(canvas: &'a mut WindowCanvas) -> Self {
         Self { canvas }
     }
-}
 
-impl SdlRender for RenderContext<'_> {
-    type Target = Window;
-
-    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target> {
-        let rect = constraints.clip_rect();
+    pub fn get_canvas(&mut self, layout: Layout) -> &mut Canvas<Window> {
+        let rect = layout.clip_rect();
         let (x, y, w, h) = rect.into();
         self.canvas
             .set_viewport(sdl2::rect::Rect::new(x, y, w.lossy_into(), h.lossy_into()));
