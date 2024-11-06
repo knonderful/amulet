@@ -4,11 +4,10 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::ttf::Font;
 use std::borrow::Cow;
-use std::path::PathBuf;
+use std::path::Path;
 use std::rc::Rc;
 use vui_core::component::mouse_aware::{MouseAware, MouseAwareState};
 use vui_core::component::{ComponentEvent, HandleEvent, Pos, Render, Size, Text};
-use vui_core::font_manager::{FontDetails, FontManager};
 use vui_core::mouse::MouseButton;
 use vui_core::render::{RenderConstraints, RenderDestination};
 use vui_core::VuiResult;
@@ -122,11 +121,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut canvas = window.into_canvas().present_vsync().build()?;
 
     let ttf_context = sdl2::ttf::init()?;
-    let mut font_manager = FontManager::new(&ttf_context);
-    let font = font_manager.load(&FontDetails {
-        path: PathBuf::from("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
-        size: 14,
-    })?;
+    let font = Rc::new(ttf_context.load_font(Path::new("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"), 14)?);
     let texture_creator = canvas.texture_creator();
 
     let mut event_pump = sdl_context.event_pump()?;

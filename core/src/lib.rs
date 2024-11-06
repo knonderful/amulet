@@ -1,45 +1,45 @@
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod component;
-pub mod font_manager;
-pub mod generator;
 pub mod math;
 pub mod mouse;
 pub mod render;
-pub mod resource_manager;
-pub mod util;
 
 pub type VuiResult<T> = Result<T, VuiError>;
-pub struct VuiError;
 
-impl Debug for VuiError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RenderError")
+#[derive(Debug)]
+pub struct VuiError {
+    message: String,
+}
+
+impl VuiError {
+    pub fn new(message: String) -> Self {
+        Self { message }
     }
 }
 
 impl Display for VuiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "failed to render")
+        write!(f, "{}", self.message)
     }
 }
 
 impl std::error::Error for VuiError {}
 
 impl From<sdl2::ttf::FontError> for VuiError {
-    fn from(_: sdl2::ttf::FontError) -> Self {
-        VuiError
+    fn from(e: sdl2::ttf::FontError) -> Self {
+        Self::new(format!("FontError: {}", e))
     }
 }
 
 impl From<sdl2::render::TextureValueError> for VuiError {
-    fn from(_: sdl2::render::TextureValueError) -> Self {
-        VuiError
+    fn from(e: sdl2::render::TextureValueError) -> Self {
+        Self::new(format!("TextureValueError: {}", e))
     }
 }
 
 impl From<String> for VuiError {
-    fn from(_: String) -> Self {
-        VuiError
+    fn from(e: String) -> Self {
+        Self::new(e)
     }
 }
