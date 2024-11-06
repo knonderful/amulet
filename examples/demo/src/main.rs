@@ -179,7 +179,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("VUI demo", 800, 600)
+        .window("Amulet Demo", 800, 600)
         .position_centered()
         .resizable()
         .build()?;
