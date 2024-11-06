@@ -1,30 +1,12 @@
 use crate::geom::{ComponentSize, Rect, Vector};
-use crate::VuiResult;
-use sdl2::rect::Rect as SdlRect;
-use sdl2::render::{TextureCreator, WindowCanvas};
-use sdl2::surface::Surface;
-use sdl2::video::WindowContext;
 
-pub struct RenderDestination<'a> {
-    texture_creator: &'a TextureCreator<WindowContext>,
-    canvas: &'a mut WindowCanvas,
-}
-
-impl<'a> RenderDestination<'a> {
-    pub fn new(
-        texture_creator: &'a TextureCreator<WindowContext>,
-        canvas: &'a mut WindowCanvas,
-    ) -> Self {
-        RenderDestination {
-            texture_creator,
-            canvas,
-        }
-    }
-}
+// TODO: Remove this
+#[derive(Default)]
+pub struct RenderDestination {}
 
 #[derive(Debug, Clone)]
 pub struct RenderConstraints {
-    clip_rect: Rect,
+    pub clip_rect: Rect,
 }
 
 impl RenderConstraints {
@@ -41,29 +23,8 @@ impl RenderConstraints {
     }
 
     pub fn clip_size(&self, size: ComponentSize) -> Option<Self> {
-        let mut rect = self.clip_rect.clone();
+        let mut rect = self.clip_rect;
         rect.set_size(size.to_i32());
         self.clip(rect)
-    }
-}
-
-pub trait BlitSurface {
-    fn blit_surface(&mut self, surface: &Surface) -> VuiResult<()>;
-}
-
-impl BlitSurface for (&mut RenderDestination<'_>, RenderConstraints) {
-    fn blit_surface(&mut self, surface: &Surface) -> VuiResult<()> {
-        let (dest, constraints) = self;
-        let texture = dest.texture_creator.create_texture_from_surface(surface)?;
-        let (x, y) = {
-            let rect = constraints.clip_rect;
-            (rect.min.x, rect.min.y)
-        };
-
-        let (w, h) = surface.size();
-        // TODO: Clipping when the clip_rect is smaller than the surface... can either use set_clip_rect() or do it manually...
-        //       Also note that for textures we wouldn't know the size... how do we handle that and is that relevant to this here...?
-        dest.canvas.copy(&texture, None, SdlRect::new(x, y, w, h))?;
-        Ok(())
     }
 }

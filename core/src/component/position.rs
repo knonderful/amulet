@@ -67,9 +67,9 @@ where
     }
 }
 
-impl<C> Render for Position<C>
+impl<C, X> Render<X> for Position<C>
 where
-    C: Render,
+    C: Render<X>,
 {
     type State<'a> = C::State<'a>;
 
@@ -77,10 +77,11 @@ where
         &self,
         state: Self::State<'_>,
         (dest, constraints): (&mut RenderDestination, RenderConstraints),
+        render_ctx: X,
     ) -> VuiResult<()> {
         let Some(constraints) = constraints.clip_topleft(self.value.to_vector()) else {
             return Ok(());
         };
-        self.inner.render(state, (dest, constraints))
+        self.inner.render(state, (dest, constraints), render_ctx)
     }
 }

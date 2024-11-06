@@ -1,11 +1,12 @@
 use amulet_core::component::{
-    ComponentEvent, HandleEvent, MouseSensor, MouseSensorState, Position, Render, Size, Text,
+    ComponentEvent, HandleEvent, MouseSensor, MouseSensorState, Position, Render, Size,
 };
 use amulet_core::geom::{ComponentSize, Rect};
 use amulet_core::mouse::Button;
 use amulet_core::render::{RenderConstraints, RenderDestination};
 use amulet_core::VuiResult;
-use amulet_sdl2::{event_iterator, Event};
+use amulet_sdl2::temp_components::Text;
+use amulet_sdl2::{event_iterator, Event, RenderContext};
 use sdl2::event::Event as SdlEvent;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -39,15 +40,16 @@ impl Size for Label<'_> {
     }
 }
 
-impl Render for Label<'_> {
+impl Render<&mut RenderContext<'_>> for Label<'_> {
     type State<'a> = ();
 
     fn render(
         &self,
         state: Self::State<'_>,
         target: (&mut RenderDestination, RenderConstraints),
+        render_context: &mut RenderContext,
     ) -> VuiResult<()> {
-        self.component.render(state, target)
+        self.component.render(state, target, render_context)
     }
 }
 
@@ -95,17 +97,22 @@ impl HandleEvent for Gui<'_> {
     }
 }
 
-impl Render for Gui<'_> {
+impl Render<&mut RenderContext<'_>> for Gui<'_> {
     type State<'a> = &'a GuiState;
 
     fn render(
         &self,
         gui_state: Self::State<'_>,
         (dest, constriants): (&mut RenderDestination, RenderConstraints),
+        render_ctx: &mut RenderContext,
     ) -> VuiResult<()> {
-        self.button
-            .render((&gui_state.button_state, ()), (dest, constriants.clone()))?;
-        self.clicked_label.render((), (dest, constriants.clone()))?;
+        self.button.render(
+            (&gui_state.button_state, ()),
+            (dest, constriants.clone()),
+            render_ctx,
+        )?;
+        self.clicked_label
+            .render((), (dest, constriants.clone()), render_ctx)?;
         Ok(())
     }
 }
@@ -164,9 +171,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas.set_draw_color(Color::RGB(24, 24, 24));
         canvas.clear();
 
-        let mut render_dest = RenderDestination::new(&texture_creator, &mut canvas);
+        let mut render_ctx = RenderContext::new(&texture_creator, &mut canvas);
+        let mut render_dest = RenderDestination::default();
         let constraints = RenderConstraints::new(Rect::new((0, 0).into(), (800, 600).into()));
-        gui.render(&gui_state, (&mut render_dest, constraints.clone()))?;
+        gui.render(
+            &gui_state,
+            (&mut render_dest, constraints.clone()),
+            &mut render_ctx,
+        )?;
 
         canvas.present();
     }

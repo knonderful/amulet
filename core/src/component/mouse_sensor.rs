@@ -2,10 +2,8 @@ use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Siz
 use crate::geom::{ComponentSize, Point, Rect};
 use crate::math::LossyInto;
 use crate::mouse::{ClickStates, HoverState};
-use crate::render::{BlitSurface, RenderConstraints, RenderDestination};
+use crate::render::{RenderConstraints, RenderDestination};
 use crate::VuiResult;
-use sdl2::pixels::{Color, PixelFormatEnum};
-use sdl2::surface::Surface;
 
 #[derive(Debug, Default, Clone)]
 pub struct MouseSensorState {
@@ -96,33 +94,19 @@ where
     }
 }
 
-impl<C> Render for MouseSensor<C>
+impl<C, X> Render<X> for MouseSensor<C>
 where
-    C: Render + Size,
+    C: Render<X> + Size,
 {
     type State<'a> = (&'a MouseSensorState, C::State<'a>);
 
     fn render(
         &self,
         state: Self::State<'_>,
-        mut target: (&mut RenderDestination, RenderConstraints),
+        target: (&mut RenderDestination, RenderConstraints),
+        render_ctx: X,
     ) -> VuiResult<()> {
-        let (state, inner_state) = state;
-        if state.hover_state.is_hovering() {
-            let size = self.size();
-            let surf = Surface::new(
-                size.width.into(),
-                size.height.into(),
-                PixelFormatEnum::ARGB8888,
-            )?;
-            let mut canvas = surf.into_canvas()?;
-            canvas.set_draw_color(Color::RGB(0, 100, 0));
-            canvas.clear();
-            let surf = canvas.into_surface();
-            target.blit_surface(&surf)?;
-        }
-
-        self.inner.render(inner_state, target)
+        self.inner.render(state.1, target, render_ctx)
     }
 }
 

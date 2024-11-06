@@ -28,18 +28,6 @@ impl Display for VuiError {
 
 impl std::error::Error for VuiError {}
 
-impl From<sdl2::ttf::FontError> for VuiError {
-    fn from(e: sdl2::ttf::FontError) -> Self {
-        Self::new(format!("FontError: {}", e))
-    }
-}
-
-impl From<sdl2::render::TextureValueError> for VuiError {
-    fn from(e: sdl2::render::TextureValueError) -> Self {
-        Self::new(format!("TextureValueError: {}", e))
-    }
-}
-
 impl From<String> for VuiError {
     fn from(e: String) -> Self {
         Self::new(e)
