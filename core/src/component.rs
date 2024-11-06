@@ -240,7 +240,7 @@ mod test {
     use crate::geom::{Point, Rect};
 
     #[test]
-    fn test_into_chain_handle_event() {
+    fn test_as_chain_handle_event() {
         let comps = (
             Position::new((12, 34).into()),
             Frame::new((100, 200).into()),
@@ -259,7 +259,7 @@ mod test {
     }
 
     #[test]
-    fn test_into_chain_adjust_layout() {
+    fn test_as_chain_adjust_layout() {
         let comps = (
             Position::new((12, 34).into()),
             Frame::new((100, 200).into()),
