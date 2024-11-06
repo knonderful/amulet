@@ -1,0 +1,9 @@
+[package]
+name = "amulet-ez"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+amulet-core = { path = "../core" }
+amulet-sdl2 = { path = "../sdl2" }
+sdl2 = { version = "0.36", features = ["ttf", "gfx"] }

@@ -1,7 +1,7 @@
-use crate::{map_error, RenderContext};
-use amulet_core::component::{ComponentEvent, HandleEvent, Render, Size};
-use amulet_core::geom::ComponentSize;
-use amulet_core::render::RenderConstraints;
+use crate::map_error;
+use crate::render::RenderContext;
+use amulet_core::component::{CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints};
+use amulet_core::geom::Size;
 use amulet_core::VuiResult;
 use sdl2::pixels::Color;
 use sdl2::surface::Surface;
@@ -10,16 +10,13 @@ use std::borrow::Cow;
 use std::rc::Rc;
 
 pub trait TextRenderer {
-    fn size_of(&self, text: &str) -> VuiResult<ComponentSize>;
+    fn size_of(&self, text: &str) -> VuiResult<Size>;
     fn render<'a>(&self, text: &str) -> VuiResult<Surface<'a>>;
 }
 
 impl TextRenderer for (&Font<'_, '_>, Color) {
-    fn size_of(&self, text: &str) -> VuiResult<ComponentSize> {
-        self.0
-            .size_of(text)
-            .map(ComponentSize::from)
-            .map_err(map_error)
+    fn size_of(&self, text: &str) -> VuiResult<Size> {
+        self.0.size_of(text).map(Size::from).map_err(map_error)
     }
 
     fn render<'a>(&self, text: &str) -> VuiResult<Surface<'a>> {
@@ -28,7 +25,7 @@ impl TextRenderer for (&Font<'_, '_>, Color) {
 }
 
 impl TextRenderer for (Rc<Font<'_, '_>>, Color) {
-    fn size_of(&self, text: &str) -> VuiResult<ComponentSize> {
+    fn size_of(&self, text: &str) -> VuiResult<Size> {
         (self.0.as_ref(), self.1).size_of(text)
     }
 
@@ -59,11 +56,11 @@ where
     }
 }
 
-impl<R> Size for Text<R>
+impl<R> CalculateSize for Text<R>
 where
     R: TextRenderer,
 {
-    fn size(&self) -> ComponentSize {
+    fn calculate_size(&self) -> Size {
         self.renderer.size_of(&self.text).unwrap() // TODO: components should always know their size
     }
 }

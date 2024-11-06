@@ -1,8 +1,5 @@
-use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Size};
-use crate::geom::{ComponentSize, Point, Rect};
-use crate::math::LossyInto;
+use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
 use crate::mouse::{ClickStates, HoverState};
-use crate::render::RenderConstraints;
 use crate::VuiResult;
 
 #[derive(Debug, Default, Clone)]
@@ -35,57 +32,35 @@ impl<C> MouseSensor<C> {
         Self { inner }
     }
 }
-impl<C> MouseSensor<C>
-where
-    C: Size,
-{
-    fn is_inside(&self, pos: Point) -> bool {
-        let size = self.size();
-        let rect = Rect::new(
-            Point::origin(),
-            Point::new(size.width.lossy_into(), size.height.lossy_into()),
-        );
-        rect.contains(pos)
-    }
-}
-
-impl<C> Size for MouseSensor<C>
-where
-    C: Size,
-{
-    fn size(&self) -> ComponentSize {
-        self.inner.size()
-    }
-}
 
 impl<C> HandleEvent for MouseSensor<C>
 where
-    C: HandleEvent + Size,
+    C: HandleEvent,
 {
     type State<'a> = (&'a mut MouseSensorState, C::State<'a>);
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
         let (state, inner_state) = state;
 
-        match event {
+        match &event {
             ComponentEvent::LoopStart => {
                 state.clear_event_states();
             }
             ComponentEvent::MouseMotion(pos) => {
-                state.hover_state.update(self.is_inside(pos));
+                state.hover_state.update(pos.is_hit());
             }
             ComponentEvent::MouseButtonDown(btn, pos) => {
-                if self.is_inside(pos) {
-                    state.click_states.click(btn);
+                if pos.is_hit() {
+                    state.click_states.click(*btn);
                 } else {
-                    state.click_states.clear(btn);
+                    state.click_states.clear(*btn);
                 }
             }
             ComponentEvent::MouseButtonUp(btn, pos) => {
-                if self.is_inside(pos) {
-                    state.click_states.unclick(btn);
+                if pos.is_hit() {
+                    state.click_states.unclick(*btn);
                 } else {
-                    state.click_states.clear(btn);
+                    state.click_states.clear(*btn);
                 }
             }
         }
@@ -94,9 +69,9 @@ where
     }
 }
 
-impl<C, X> Render<X> for MouseSensor<C>
+impl<C, R> Render<R> for MouseSensor<C>
 where
-    C: Render<X> + Size,
+    C: Render<R>,
 {
     type State<'a> = (&'a MouseSensorState, C::State<'a>);
 
@@ -104,24 +79,18 @@ where
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: X,
+        render_ctx: R,
     ) -> VuiResult<()> {
         self.inner.render(state.1, constraints, render_ctx)
     }
 }
 
-impl<C> Inner for MouseSensor<C> {
-    type Component = C;
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::component::component_check;
+    use crate::component::noop::Noop;
 
-    fn inner(&self) -> &Self::Component {
-        &self.inner
-    }
-}
-
-impl<C> InnerMut for MouseSensor<C> {
-    type Component = C;
-
-    fn inner_mut(&mut self) -> &mut Self::Component {
-        &mut self.inner
-    }
+    // Static check that we have all component traits implemented
+    const _: () = component_check::<MouseSensor<Noop>, ()>();
 }

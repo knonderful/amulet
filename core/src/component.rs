@@ -1,31 +1,90 @@
-use crate::geom::{ComponentSize, Point};
+use crate::geom::{Clip, Point, Rect, Shrink, Size, Vector};
 use crate::mouse::Button;
-use crate::render::RenderConstraints;
 use crate::VuiResult;
-use std::ops::Deref;
 
+mod area;
 mod mouse_sensor;
+mod noop;
 mod position;
 
 pub use mouse_sensor::{MouseSensor, MouseSensorState};
 pub use position::Position;
+pub use area::Area;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FramedPosition {
+    pos: Point,
+    comp_rect: Option<Rect>,
+}
+
+impl FramedPosition {
+    pub fn new(pos: Point, comp_rect: Rect) -> Self {
+        Self { pos, comp_rect: Some(comp_rect) }
+    }
+
+    pub fn clip(self, vector: Vector) -> Self {
+        let Some(rect) = self.comp_rect else {
+            return self;
+        };
+
+        Self {
+            pos: self.pos,
+            comp_rect: rect.clip(vector),
+        }
+    }
+
+    pub fn shrink(self, size: Size) -> Self {
+        let Some(rect) = self.comp_rect else {
+            return self;
+        };
+
+        Self {
+            pos: self.pos,
+            comp_rect: Some(rect.shrink(size)),
+        }
+    }
+
+    pub fn is_hit(&self) -> bool {
+        self.comp_rect
+            .map(|rect| rect.contains(self.pos))
+            .unwrap_or(false)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ComponentEvent {
     LoopStart,
-    MouseMotion(Point),
-    MouseButtonDown(Button, Point),
-    MouseButtonUp(Button, Point),
+    MouseMotion(FramedPosition),
+    MouseButtonDown(Button, FramedPosition),
+    MouseButtonUp(Button, FramedPosition),
 }
 
-pub trait Inner {
-    type Component;
-    fn inner(&self) -> &Self::Component;
-}
+impl ComponentEvent {
+    pub fn clip(self, vector: Vector) -> Self {
+        match self {
+            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos.clip(vector)),
+            ComponentEvent::MouseButtonDown(btn, pos) => {
+                ComponentEvent::MouseButtonDown(btn, pos.clip(vector))
+            }
+            ComponentEvent::MouseButtonUp(btn, pos) => {
+                ComponentEvent::MouseButtonUp(btn, pos.clip(vector))
+            }
+            other => other,
+        }
+    }
 
-pub trait InnerMut {
-    type Component;
-    fn inner_mut(&mut self) -> &mut Self::Component;
+    pub fn shrink(self, size: Size) -> Self {
+        match self {
+            ComponentEvent::MouseMotion(pos) => ComponentEvent::MouseMotion(pos.shrink(size)),
+            ComponentEvent::MouseButtonDown(btn, pos) => {
+                ComponentEvent::MouseButtonDown(btn, pos.shrink(size))
+            }
+            ComponentEvent::MouseButtonUp(btn, pos) => {
+                ComponentEvent::MouseButtonUp(btn, pos.shrink(size))
+            }
+            other => other,
+        }
+    }
 }
 
 pub trait HandleEvent {
@@ -34,56 +93,56 @@ pub trait HandleEvent {
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()>;
 }
 
-impl<T> HandleEvent for T
-where
-    T: Deref,
-    <T as Deref>::Target: HandleEvent,
-{
-    type State<'a> = <<T as Deref>::Target as HandleEvent>::State<'a>;
+pub trait CalculateSize {
+    fn calculate_size(&self) -> Size;
+}
 
-    fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        self.deref().handle_event(state, event)
+#[derive(Debug, Clone)]
+pub struct RenderConstraints {
+    clip_rect: Rect,
+}
+
+impl RenderConstraints {
+    pub fn new(clip_rect: Rect) -> Self {
+        Self { clip_rect }
+    }
+
+    pub fn clip_rect(&self) -> Rect {
+        self.clip_rect
     }
 }
 
-pub trait Size {
-    fn size(&self) -> ComponentSize;
-}
-
-impl<T> Size for T
-where
-    T: Deref,
-    <T as Deref>::Target: Size,
-{
-    fn size(&self) -> ComponentSize {
-        self.deref().size()
+impl Clip for RenderConstraints {
+    fn clip(&self, vector: Vector) -> Option<Self> {
+        self.clip_rect.clip(vector).map(Self::new)
     }
 }
 
-pub trait Render<X> {
+impl Shrink for RenderConstraints {
+    fn shrink(&self, size: Size) -> Self {
+        Self::new(self.clip_rect.shrink(size))
+    }
+}
+
+pub trait Render<R> {
     type State<'a>;
 
     fn render(
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: X,
+        render_ctx: R,
     ) -> VuiResult<()>;
 }
 
-impl<T, R> Render<R> for T
+pub const fn component_check<T, R>()
 where
-    T: Deref,
-    <T as Deref>::Target: Render<R>,
+    T: HandleEvent + Render<R>,
 {
-    type State<'a> = <T::Target as Render<R>>::State<'a>;
+}
 
-    fn render(
-        &self,
-        state: Self::State<'_>,
-        constraints: RenderConstraints,
-        render_ctx: R,
-    ) -> VuiResult<()> {
-        self.deref().render(state, constraints, render_ctx)
-    }
+pub const fn sized_component_check<T, R>()
+where
+    T: HandleEvent + Render<R> + CalculateSize,
+{
 }

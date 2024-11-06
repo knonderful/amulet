@@ -1,8 +1,8 @@
-use crate::component::{ComponentEvent, HandleEvent, Inner, InnerMut, Render, Size};
-use crate::geom::{ComponentSize, Point};
-use crate::render::RenderConstraints;
+use crate::component::{ComponentEvent, HandleEvent, Render, RenderConstraints};
+use crate::geom::{Clip, Point};
 use crate::VuiResult;
 
+#[derive(Debug, Clone, Default)]
 pub struct Position<C> {
     value: Point,
     inner: C,
@@ -18,22 +18,6 @@ impl<C> Position<C> {
     }
 }
 
-impl<C> Inner for Position<C> {
-    type Component = C;
-
-    fn inner(&self) -> &Self::Component {
-        &self.inner
-    }
-}
-
-impl<C> InnerMut for Position<C> {
-    type Component = C;
-
-    fn inner_mut(&mut self) -> &mut Self::Component {
-        &mut self.inner
-    }
-}
-
 impl<C> HandleEvent for Position<C>
 where
     C: HandleEvent,
@@ -41,35 +25,13 @@ where
     type State<'a> = C::State<'a>;
 
     fn handle_event(&self, state: Self::State<'_>, event: ComponentEvent) -> VuiResult<()> {
-        let event = match event {
-            ComponentEvent::MouseMotion(pos) => {
-                ComponentEvent::MouseMotion((pos - self.value).to_point())
-            }
-            ComponentEvent::MouseButtonUp(btn, pos) => {
-                ComponentEvent::MouseButtonUp(btn, (pos - self.value).to_point())
-            }
-            ComponentEvent::MouseButtonDown(btn, pos) => {
-                ComponentEvent::MouseButtonDown(btn, (pos - self.value).to_point())
-            }
-            other => other,
-        };
-
-        self.inner.handle_event(state, event)
+        self.inner.handle_event(state, event.clip(self.value.to_vector()))
     }
 }
 
-impl<C> Size for Position<C>
+impl<C, R> Render<R> for Position<C>
 where
-    C: Size,
-{
-    fn size(&self) -> ComponentSize {
-        self.inner.size()
-    }
-}
-
-impl<C, X> Render<X> for Position<C>
-where
-    C: Render<X>,
+    C: Render<R>,
 {
     type State<'a> = C::State<'a>;
 
@@ -77,11 +39,21 @@ where
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: X,
+        render_ctx: R,
     ) -> VuiResult<()> {
-        let Some(constraints) = constraints.clip_topleft(self.value.to_vector()) else {
+        let Some(constraints) = constraints.clip(self.value.to_vector()) else {
             return Ok(());
         };
         self.inner.render(state, constraints, render_ctx)
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::component::component_check;
+    use crate::component::noop::Noop;
+
+    // Static check that we have all component traits implemented
+    const _: () = component_check::<Position<Noop>, ()>();
 }
