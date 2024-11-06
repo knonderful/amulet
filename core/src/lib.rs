@@ -1,12 +1,12 @@
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod component;
-pub mod resource_manager;
 pub mod font_manager;
+pub mod generator;
 pub mod math;
 pub mod render;
+pub mod resource_manager;
 pub mod util;
-pub mod generator;
 
 pub type VuiResult<T> = Result<T, VuiError>;
 pub struct VuiError;
@@ -42,4 +42,3 @@ impl From<String> for VuiError {
         VuiError
     }
 }
-

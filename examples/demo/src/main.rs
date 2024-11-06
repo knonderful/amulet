@@ -5,7 +5,9 @@ use sdl2::rect::{Point, Rect};
 use sdl2::ttf::Font;
 use std::path::PathBuf;
 use std::rc::Rc;
-use vui_core::component::{ComponentEvent, HandleEvent, MouseAware, Pos, PositionalComponent, Render, Text, View};
+use vui_core::component::{
+    ComponentEvent, HandleEvent, MouseAware, Pos, PositionalComponent, Render, Text, View,
+};
 use vui_core::font_manager::{FontDetails, FontManager};
 use vui_core::generator::Generator;
 use vui_core::math::Convert;
@@ -97,11 +99,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         (220, 220).into(),
         Text::new(
             "LABEL IN A BOX".into(),
-            ().extend(font.clone()).extend(Color::RGB(
-                255,
-                0,
-                0,
-            )),
+            ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
         ),
     ));
 
@@ -112,11 +110,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         (240, 240).into(),
         Text::new(
             "LABEL BEHIND A DYN ARRAY".into(),
-            ().extend(font.clone()).extend(Color::RGB(
-                255,
-                0,
-                0,
-            )),
+            ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
         ),
     );
 
@@ -128,22 +122,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             (250, 250).into(),
             Text::new(
                 "MYGUI LABEL 1".into(),
-                ().extend(font.clone()).extend(Color::RGB(
-                    255,
-                    0,
-                    0,
-                )),
+                ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
             ),
         ),
         label_2: Pos::new(
             (250, 270).into(),
             Text::new(
                 "MYGUI LABEL 2".into(),
-                ().extend(font.clone()).extend(Color::RGB(
-                    255,
-                    0,
-                    0,
-                )),
+                ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
             ),
         ),
     };
@@ -153,11 +139,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         (100, 300).into(),
         MouseAware::new(Text::new(
             "MOUSE AWARE".into(),
-            ().extend(font.clone()).extend(Color::RGB(
-                255,
-                0,
-                0,
-            )),
+            ().extend(font.clone()).extend(Color::RGB(255, 0, 0)),
         )),
     );
 
@@ -169,11 +151,11 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-                Event::MouseMotion { x,y,.. } => {
-                    mouse_aware.handle_event(ComponentEvent::MouseMove(Point::new(x,y)))?;
+                Event::MouseMotion { x, y, .. } => {
+                    mouse_aware.handle_event(ComponentEvent::MouseMove(Point::new(x, y)))?;
                 }
-                Event::MouseButtonDown { x,y,.. } => {
-                    mouse_aware.handle_event(ComponentEvent::MouseDown(Point::new(x,y)))?;
+                Event::MouseButtonDown { x, y, .. } => {
+                    mouse_aware.handle_event(ComponentEvent::MouseDown(Point::new(x, y)))?;
                 }
                 // Event::Window { win_event, .. } => match win_event {
                 //     WindowEvent::SizeChanged(w, h) => {

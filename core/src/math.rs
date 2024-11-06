@@ -68,7 +68,12 @@ pub trait Translated {
 
 impl Translated for Rect {
     fn translated(&self, delta: Point) -> Self {
-        Rect::new(self.x() + delta.x(), self.y() + delta.y(), self.width(), self.height())
+        Rect::new(
+            self.x() + delta.x(),
+            self.y() + delta.y(),
+            self.width(),
+            self.height(),
+        )
     }
 }
 
@@ -78,7 +83,6 @@ pub trait Resized {
 
 impl Resized for Rect {
     fn resized(&self, size: Size) -> Self {
-        Rect::new(self.x() , self.y(), size.w, size.h)
+        Rect::new(self.x(), self.y(), size.w, size.h)
     }
 }
-

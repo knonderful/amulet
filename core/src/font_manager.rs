@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use crate::resource_manager::{ResourceLoader, ResourceManager};
 use sdl2::ttf::{Font, Sdl2TtfContext};
+use std::path::PathBuf;
 
 pub type FontManager<'l> = ResourceManager<'l, FontDetails, Font<'l, 'static>, Sdl2TtfContext>;
 
