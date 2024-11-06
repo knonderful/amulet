@@ -71,7 +71,7 @@ impl<C, R> Render<R> for (MouseSensor, C)
 where
     C: Render<R>,
 {
-    type State<'a> = (&'a MouseSensorState, C::State<'a>);
+    type State<'a> = C::State<'a>;
 
     fn render(
         &self,
@@ -79,7 +79,7 @@ where
         constraints: RenderConstraints,
         render_ctx: &mut R,
     ) -> VuiResult<()> {
-        self.1.render(state.1, constraints, render_ctx)
+        self.1.render(state, constraints, render_ctx)
     }
 }
 

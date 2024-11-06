@@ -5,7 +5,6 @@ use sdl2::ttf::FontError;
 use sdl2::EventPump;
 
 pub mod render;
-pub mod temp_components;
 
 fn map_mouse_button(value: sdl2::mouse::MouseButton) -> Option<mouse::Button> {
     use sdl2::mouse::MouseButton as MB;

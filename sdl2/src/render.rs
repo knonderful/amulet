@@ -1,21 +1,22 @@
 use amulet_core::component::RenderConstraints;
-use amulet_core::VuiResult;
-use sdl2::rect::Rect as SdlRect;
-use sdl2::render::{TextureCreator, WindowCanvas};
-use sdl2::surface::Surface;
-use sdl2::video::WindowContext;
+use sdl2::render::{Canvas, RenderTarget, TextureCreator, WindowCanvas};
+use sdl2::video::{Window, WindowContext};
+use std::ops::DerefMut;
 
 pub trait SdlRender {
-    fn blit_surface(
-        &mut self,
-        constraints: RenderConstraints,
-        surface: &Surface,
-    ) -> VuiResult<()>;
+    type Target: RenderTarget;
+
+    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target>;
 }
 
-impl<T> SdlRender for &mut T where T: SdlRender {
-    fn blit_surface(&mut self, constraints: RenderConstraints, surface: &Surface) -> VuiResult<()> {
-        (**self).blit_surface(constraints, surface)
+impl<R> SdlRender for &mut R
+where
+    R: SdlRender,
+{
+    type Target = R::Target;
+
+    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target> {
+        self.deref_mut().get_canvas(constraints)
     }
 }
 
@@ -35,24 +36,16 @@ impl<'a> RenderContext<'a> {
         }
     }
 }
-impl SdlRender for RenderContext<'_> {
-    fn blit_surface(
-        &mut self,
-        constraints: RenderConstraints,
-        surface: &Surface,
-    ) -> VuiResult<()> {
-        let texture = self
-            .texture_creator
-            .create_texture_from_surface(surface)?;
-        let (x, y) = {
-            let rect = constraints.clip_rect();
-            (rect.min.x, rect.min.y)
-        };
 
-        let (w, h) = surface.size();
-        // TODO: Clipping when the clip_rect is smaller than the surface... can either use set_clip_rect() or do it manually...
-        //       Also note that for textures we wouldn't know the size... how do we handle that and is that relevant to this here...?
-        self.canvas.copy(&texture, None, SdlRect::new(x, y, w, h))?;
-        Ok(())
+impl SdlRender for RenderContext<'_> {
+    type Target = Window;
+
+    fn get_canvas(&mut self, constraints: RenderConstraints) -> &mut Canvas<Self::Target> {
+        let rect = constraints.clip_rect();
+        let origin = rect.min;
+        let (w, h) = rect.size().cast().into();
+        self.canvas
+            .set_viewport(sdl2::rect::Rect::new(origin.x, origin.y, w, h));
+        &mut self.canvas
     }
 }
