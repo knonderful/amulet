@@ -1,7 +1,7 @@
 use crate::theme::Theme;
 use crate::widget::Button;
 use crate::FramedTexture;
-use amulet_core::geom::{Point, Rect, Size};
+use amulet_core::geom::{Rect, Size};
 use amulet_core::VuiResult;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
@@ -23,17 +23,15 @@ impl<'a> WidgetFactory<'a> {
     }
 
     pub fn button(&mut self, text: &str) -> VuiResult<Button<'a>> {
-        let label = self.theme.label(text)?;
-        let label_size = Size::from(label.size());
-        let (padding_h, padding_v) = (PADDING_H, PADDING_V);
-        let label_rect =
-            Rect::from_origin_and_size(Point::new(padding_h, padding_v), label_size.cast());
-        let button_rect = label_rect.inflate(padding_h, padding_v);
+        let label_surf = self.theme.label(text)?;
+        let label_rect = Rect::from_size(Size::from(label_surf.size()).cast())
+            .translate((PADDING_H, PADDING_V).into());
+        let button_rect = label_rect.inflate(PADDING_H, PADDING_V);
         let button_surf = self.theme.button(button_rect.size().cast())?;
 
         let background =
             FramedTexture::new(button_rect, button_surf.as_texture(self.texture_creator)?);
-        let label = FramedTexture::new(label_rect, label.as_texture(self.texture_creator)?);
+        let label = FramedTexture::new(label_rect, label_surf.as_texture(self.texture_creator)?);
 
         Ok(Button::new(background, label))
     }
@@ -47,17 +45,23 @@ impl<'a> WidgetFactory<'a> {
             labels.push(surface);
         }
 
-        let (padding_h, padding_v) = (PADDING_H, PADDING_V);
+        let button_rect = {
+            let size = max_size + Size::new(PADDING_H as u32 * 2, PADDING_V as u32 * 2);
+            Rect::from_size(size.cast())
+        };
 
         let mut out = Vec::with_capacity(labels.len());
         for label in labels {
-            let label_rect =
-                Rect::from_origin_and_size(Point::new(padding_h, padding_v), max_size.cast());
-            let button_rect = label_rect.inflate(padding_h, padding_v);
+            let diff_size = max_size - label.size().into();
+            let (x, y): (i32, i32) = diff_size.cast().into();
+            let label_rect = Rect::from_size(Size::from(label.size()).cast())
+                .translate((PADDING_H, PADDING_V).into())
+                .translate((x / 2, y / 2).into());
+            let label = FramedTexture::new(label_rect, label.as_texture(self.texture_creator)?);
+
             let button_surf = self.theme.button(button_rect.size().cast())?;
             let background =
                 FramedTexture::new(button_rect, button_surf.as_texture(self.texture_creator)?);
-            let label = FramedTexture::new(label_rect, label.as_texture(self.texture_creator)?);
 
             out.push(Button::new(background, label));
         }

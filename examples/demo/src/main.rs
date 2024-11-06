@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use amulet_core::component::{ComponentEvent, HandleEvent, Position, Render, RenderConstraints};
 use amulet_core::geom::{Rect, Size};
 use amulet_core::VuiResult;
@@ -9,6 +8,7 @@ use amulet_sdl2::{event_iterator, Event};
 use sdl2::event::{Event as SdlEvent, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Default)]
 struct AppState {
