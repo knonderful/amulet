@@ -79,7 +79,7 @@ where
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: R,
+        render_ctx: &mut R,
     ) -> VuiResult<()> {
         self.inner.render(state.1, constraints, render_ctx)
     }

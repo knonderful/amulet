@@ -35,10 +35,12 @@ where
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: R,
+        render_ctx: &mut R,
     ) -> VuiResult<()> {
-        self.inner
-            .render(state, constraints.shrink(self.size), render_ctx)
+        let Some(constraints) = constraints.shrink(self.size) else {
+            return Ok(());
+        };
+        self.inner.render(state, constraints, render_ctx)
     }
 }
 

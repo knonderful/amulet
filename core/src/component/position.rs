@@ -40,7 +40,7 @@ where
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: R,
+        render_ctx: &mut R,
     ) -> VuiResult<()> {
         let Some(constraints) = constraints.clip(self.value.to_vector()) else {
             return Ok(());

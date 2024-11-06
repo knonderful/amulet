@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 amulet-core = { path = "../../core" }
 amulet-sdl2 = { path = "../../sdl2" }
+amulet-ez = { path = "../../ez" }
 sdl2 = { version = "0.36", features = ["ttf", "gfx"] }

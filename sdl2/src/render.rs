@@ -6,6 +6,20 @@ use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::surface::Surface;
 use sdl2::video::WindowContext;
 
+pub trait SdlRender {
+    fn blit_surface(
+        &mut self,
+        constraints: RenderConstraints,
+        surface: &Surface,
+    ) -> VuiResult<()>;
+}
+
+impl<T> SdlRender for &mut T where T: SdlRender {
+    fn blit_surface(&mut self, constraints: RenderConstraints, surface: &Surface) -> VuiResult<()> {
+        (**self).blit_surface(constraints, surface)
+    }
+}
+
 pub struct RenderContext<'a> {
     texture_creator: &'a TextureCreator<WindowContext>,
     canvas: &'a mut WindowCanvas,
@@ -21,8 +35,9 @@ impl<'a> RenderContext<'a> {
             canvas,
         }
     }
-
-    pub fn blit_surface(
+}
+impl SdlRender for RenderContext<'_> {
+    fn blit_surface(
         &mut self,
         constraints: RenderConstraints,
         surface: &Surface,

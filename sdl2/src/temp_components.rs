@@ -1,5 +1,5 @@
 use crate::map_error;
-use crate::render::RenderContext;
+use crate::render::SdlRender;
 use amulet_core::component::{
     CalculateSize, ComponentEvent, HandleEvent, Render, RenderConstraints,
 };
@@ -18,11 +18,11 @@ pub trait TextRenderer {
 
 impl TextRenderer for (&Font<'_, '_>, Color) {
     fn size_of(&self, text: &str) -> VuiResult<Size> {
-        self.0.size_of(text).map(Size::from).map_err(map_error)
+        Ok(self.0.size_of(text).map(Size::from)?)
     }
 
     fn render<'a>(&self, text: &str) -> VuiResult<Surface<'a>> {
-        self.0.render(text).blended(self.1).map_err(map_error)
+        Ok(self.0.render(text).blended(self.1)?)
     }
 }
 
@@ -67,17 +67,18 @@ where
     }
 }
 
-impl<R> Render<&mut RenderContext<'_>> for Text<R>
+impl<R, X> Render<X> for Text<R>
 where
     R: TextRenderer,
+    X: SdlRender,
 {
     type State<'a> = ();
 
     fn render(
         &self,
-        _state: Self::State<'_>,
+        _: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: &mut RenderContext,
+        render_ctx: &mut X,
     ) -> VuiResult<()> {
         let surface = self.renderer.render(&self.text)?;
         render_ctx.blit_surface(constraints, &surface)

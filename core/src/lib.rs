@@ -8,7 +8,7 @@ pub mod component;
 pub mod geom;
 pub mod mouse;
 
-pub type VuiResult<T> = Result<T, VuiError>;
+pub type VuiResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
 pub struct VuiError {

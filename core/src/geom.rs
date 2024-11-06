@@ -19,11 +19,18 @@ impl Clip for Rect {
 }
 
 pub trait Shrink: Sized {
-    fn shrink(&self, size: Size) -> Self;
+    fn shrink(&self, size: Size) -> Option<Self>;
 }
 
 impl Shrink for Rect {
-    fn shrink(&self, size: Size) -> Self {
-        Self::from_origin_and_size(self.min, self.size().min(size.to_i32()))
+    fn shrink(&self, size: Size) -> Option<Self> {
+        if size.is_empty() {
+            return None;
+        }
+
+        Some(Self::from_origin_and_size(
+            self.min,
+            self.size().min(size.to_i32()),
+        ))
     }
 }

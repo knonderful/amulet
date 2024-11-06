@@ -21,7 +21,7 @@ impl CalculateSize for Noop {
 impl<R> Render<R> for Noop {
     type State<'a> = ();
 
-    fn render(&self, _: Self::State<'_>, _: RenderConstraints, _: R) -> VuiResult<()> {
+    fn render(&self, _: Self::State<'_>, _: RenderConstraints, _: &mut R) -> VuiResult<()> {
         Ok(())
     }
 }

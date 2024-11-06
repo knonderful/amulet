@@ -35,7 +35,7 @@ impl FramedPosition {
     pub fn shrink(self, size: Size) -> Self {
         Self {
             absolute_position: self.absolute_position,
-            frame_rect: self.frame_rect.shrink(size),
+            frame_rect: self.frame_rect.shrink(size).unwrap_or_default(),
         }
     }
 
@@ -112,8 +112,8 @@ impl Clip for RenderConstraints {
 }
 
 impl Shrink for RenderConstraints {
-    fn shrink(&self, size: Size) -> Self {
-        Self::new(self.clip_rect.shrink(size))
+    fn shrink(&self, size: Size) -> Option<Self> {
+        self.clip_rect.shrink(size).map(Self::new)
     }
 }
 
@@ -124,7 +124,7 @@ pub trait Render<R> {
         &self,
         state: Self::State<'_>,
         constraints: RenderConstraints,
-        render_ctx: R,
+        render_ctx: &mut R,
     ) -> VuiResult<()>;
 }
 
